@@ -61,4 +61,12 @@ mod tests {
 
         assert_eq!(expected, part1(&input).unwrap())
     }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![1721, 979, 366, 299, 675, 1456];
+        let expected = 241861950;
+
+        assert_eq!(expected, part2(&input).unwrap())
+    }
 }
