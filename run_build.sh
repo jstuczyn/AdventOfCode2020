@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for i in {1..1}; do
+for i in {1..25}; do
     if [ -d "day$i" ]; then
             cargo fmt --manifest-path=day"$i"/Cargo.toml --verbose --all -- --check
             cargo build --manifest-path=day"$i"/Cargo.toml --verbose --all
