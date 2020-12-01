@@ -31,10 +31,23 @@ fn part1(input: &[usize]) -> Option<usize> {
     None
 }
 
+fn part2(input: &[usize]) -> Option<usize> {
+    for triplet in input.iter().tuple_combinations::<(_, _, _)>() {
+        if triplet.0 + triplet.1 + triplet.2 == 2020 {
+            return Some(triplet.0 * triplet.1 * triplet.2);
+        }
+    }
+
+    None
+}
+
 fn main() {
     let input = input_parser::read_input_file("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
     println!("Part 1 result is {}", part1_result);
+
+    let part2_result = part2(&input).expect("failed to solve part2");
+    println!("Part 1 result is {}", part2_result);
 }
 
 #[cfg(test)]
