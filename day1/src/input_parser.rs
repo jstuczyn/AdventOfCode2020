@@ -18,7 +18,7 @@ use std::io::BufRead;
 use std::str::FromStr;
 use std::{io, path::Path};
 
-fn read_input_file<T, P>(path: P) -> io::Result<Vec<T>>
+pub(crate) fn read_input_file<T, P>(path: P) -> io::Result<Vec<T>>
 where
     P: AsRef<Path>,
     T: FromStr,
