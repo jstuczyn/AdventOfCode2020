@@ -47,7 +47,7 @@ fn main() {
     println!("Part 1 result is {}", part1_result);
 
     let part2_result = part2(&input).expect("failed to solve part2");
-    println!("Part 1 result is {}", part2_result);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
