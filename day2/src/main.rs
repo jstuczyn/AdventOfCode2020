@@ -64,7 +64,9 @@ impl TryFrom<String> for Policy {
 
 impl Policy {
     fn verify_password(&self, password: &Password) -> bool {
-        false
+        let chars = password.chars();
+        let count = chars.filter(|c| c == &self.character).count();
+        count >= self.lower_bound && count <= self.upper_bound
     }
 }
 
