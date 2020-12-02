@@ -63,10 +63,19 @@ impl TryFrom<String> for Policy {
 }
 
 impl Policy {
-    fn verify_password(&self, password: &Password) -> bool {
+    fn verify_password_part1(&self, password: &Password) -> bool {
         let chars = password.chars();
         let count = chars.filter(|c| c == &self.character).count();
         count >= self.lower_bound && count <= self.upper_bound
+    }
+
+    fn verify_password_part2(&self, password: &Password) -> bool {
+        let chars: Vec<_> = password.chars().collect();
+
+        let first_char = chars[self.lower_bound - 1];
+        let second_char = chars[self.upper_bound - 1];
+
+        (first_char == self.character) ^ (second_char == self.character)
     }
 }
 
@@ -95,7 +104,7 @@ fn part1(input: &[String]) -> Option<usize> {
     let mut valid_count = 0;
     for policy_password in input.iter().map(parse_into_policy_password) {
         let (policy, password) = policy_password?;
-        if policy.verify_password(&password) {
+        if policy.verify_password_part1(&password) {
             valid_count += 1;
         }
     }
@@ -103,7 +112,14 @@ fn part1(input: &[String]) -> Option<usize> {
 }
 
 fn part2(input: &[String]) -> Option<usize> {
-    None
+    let mut valid_count = 0;
+    for policy_password in input.iter().map(parse_into_policy_password) {
+        let (policy, password) = policy_password?;
+        if policy.verify_password_part2(&password) {
+            valid_count += 1;
+        }
+    }
+    Some(valid_count)
 }
 
 fn main() {
@@ -129,5 +145,17 @@ mod tests {
         let expected = 2;
 
         assert_eq!(expected, part1(&input).unwrap())
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            "1-3 a: abcde".to_string(),
+            "1-3 b: cdefg".to_string(),
+            "2-9 c: ccccccccc".to_string(),
+        ];
+        let expected = 1;
+
+        assert_eq!(expected, part2(&input).unwrap())
     }
 }
