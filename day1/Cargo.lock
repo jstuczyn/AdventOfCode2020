@@ -5,6 +5,7 @@ name = "day1"
 version = "0.1.0"
 dependencies = [
  "itertools",
+ "utils",
 ]
 
 [[package]]
@@ -21,3 +22,7 @@ checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
 dependencies = [
  "either",
 ]
+
+[[package]]
+name = "utils"
+version = "0.1.0"
