@@ -36,19 +36,19 @@ impl TryFrom<String> for Policy {
         // we are left with `lowerbound-upperbound character`
         let split: Vec<_> = raw_policy.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(MalformedPolicy)
+            return Err(MalformedPolicy);
         }
 
         let chars_raw: Vec<_> = split[1].chars().collect();
         if chars_raw.len() != 1 {
-            return Err(MalformedPolicy)
+            return Err(MalformedPolicy);
         }
 
         let character = chars_raw.first().ok_or_else(|| MalformedPolicy)?.to_owned();
 
         let bound_split: Vec<_> = split[0].split('-').collect();
         if bound_split.len() != 2 {
-            return Err(MalformedPolicy)
+            return Err(MalformedPolicy);
         }
 
         let lower_bound = bound_split[0].parse().map_err(|_| MalformedPolicy)?;
@@ -62,13 +62,15 @@ impl TryFrom<String> for Policy {
     }
 }
 
-type Password = &'static str;
-
-fn verify_password(policy: &Policy, password: Password) -> bool {
-    false
+impl Policy {
+    fn verify_password(&self, password: &Password) -> bool {
+        false
+    }
 }
 
-// input is formatted as follows: 
+type Password = String;
+
+// input is formatted as follows:
 // `lowerbound-upperbound character: password`
 // for example: `1-3 a: abcde`
 // note that final space separates policy from password
@@ -76,24 +78,26 @@ fn parse_into_policy_password(input_line: &String) -> Option<(Policy, Password)>
     let split: Vec<_> = input_line.split_whitespace().collect();
 
     if split.len() != 3 {
-        return None
+        return None;
     }
-    
+
     // we know there will be 2 chunks in policy due to the described structure
     let policy_raw = vec![split[0], split[1]].join(" ");
-    let password = split[2];
+    let password = split[2].to_owned();
     let policy = Policy::try_from(policy_raw).ok()?;
 
-    println!("policy: {:?}, pass: {:?}", policy, password);
-    
-    None
+    Some((policy, password))
 }
 
 fn part1(input: &[String]) -> Option<usize> {
-    parse_into_policy_password(&input[0]);
-    // input.iter().map(parse_into_policy_password);
-
-    None
+    let mut valid_count = 0;
+    for policy_password in input.iter().map(parse_into_policy_password) {
+        let (policy, password) = policy_password?;
+        if policy.verify_password(&password) {
+            valid_count += 1;
+        }
+    }
+    Some(valid_count)
 }
 
 fn part2(input: &[String]) -> Option<usize> {
@@ -115,7 +119,11 @@ mod tests {
 
     #[test]
     fn part1_sample_input() {
-        let input = vec!["1-3 a: abcde".to_string(), "1-3 b: cdefg".to_string(), "2-9 c: ccccccccc".to_string()];
+        let input = vec![
+            "1-3 a: abcde".to_string(),
+            "1-3 b: cdefg".to_string(),
+            "2-9 c: ccccccccc".to_string(),
+        ];
         let expected = 2;
 
         assert_eq!(expected, part1(&input).unwrap())
