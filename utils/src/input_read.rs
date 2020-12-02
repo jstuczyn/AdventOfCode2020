@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::Path;
 use std::fmt::Debug;
 use std::fs::File;
-use std::io::BufRead;
 use std::str::FromStr;
-use std::{io, path::Path};
+use std::io::{self, BufRead};
 
-pub(crate) fn read_input_file<T, P>(path: P) -> io::Result<Vec<T>>
+pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
 where
     P: AsRef<Path>,
     T: FromStr,

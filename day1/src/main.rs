@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use itertools::Itertools;
-
-mod input_parser;
+use utils::input_read;
 
 fn part1(input: &[usize]) -> Option<usize> {
     // if you really want to be fancy about it, you could sort the whole thing first,
@@ -42,7 +41,7 @@ fn part2(input: &[usize]) -> Option<usize> {
 }
 
 fn main() {
-    let input = input_parser::read_input_file("input").expect("failed to read input file");
+    let input = input_read::read_line_input("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
     println!("Part 1 result is {}", part1_result);
 
