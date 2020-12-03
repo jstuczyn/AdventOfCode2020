@@ -65,14 +65,6 @@ impl<'a> TryFrom<&'a String> for Row {
     }
 }
 
-// impl std::ops::Index<usize> for Row {
-//     type Output = Location;
-//
-//     fn index(&self, index: usize) -> &Self::Output {
-//         self.0.index(index)
-//     }
-// }
-
 struct Grid(Vec<Row>);
 
 impl<'a> TryFrom<&'a [String]> for Grid {
@@ -123,7 +115,7 @@ impl Grid {
 
 struct GridIntoIterator {
     slope: (usize, usize),
-    position: (usize, usize),
+    position: Position,
     grid: Grid,
 }
 
@@ -135,12 +127,12 @@ impl Iterator for GridIntoIterator {
         if self.position.1 >= self.grid.len() {
             None
         } else {
-            let loc = self.grid[self.position];
+            let location = self.grid[self.position];
             self.position = (
                 (self.position.0 + self.slope.0) % self.grid.row_len(),
                 self.position.1 + self.slope.1,
             );
-            Some(loc)
+            Some(location)
         }
     }
 }
