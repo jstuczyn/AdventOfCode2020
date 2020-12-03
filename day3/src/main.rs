@@ -156,7 +156,18 @@ fn part1(input: &[String]) -> Option<usize> {
 }
 
 fn part2(input: &[String]) -> Option<usize> {
-    None
+    let slopes = vec![(1usize, 1usize), (3, 1), (5, 1), (7, 1), (1, 2)];
+    // can't do it with a single iterator due to trying to catch errors with `?` : (
+    let mut running_total = 1;
+    for slope in slopes {
+        running_total *= Grid::try_from(input)
+            .ok()?
+            .into_iterator(slope)
+            .filter(|location| location.is_tree())
+            .count();
+    }
+
+    Some(running_total)
 }
 
 fn main() {
@@ -164,8 +175,8 @@ fn main() {
     let part1_result = part1(&input).expect("failed to solve part1");
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input).expect("failed to solve part2");
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input).expect("failed to solve part2");
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -191,5 +202,26 @@ mod tests {
         let expected = 7;
 
         assert_eq!(expected, part1(&input).unwrap())
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            "..##.......".to_string(),
+            "#...#...#..".to_string(),
+            ".#....#..#.".to_string(),
+            "..#.#...#.#".to_string(),
+            ".#...##..#.".to_string(),
+            "..#.##.....".to_string(),
+            ".#.#.#....#".to_string(),
+            ".#........#".to_string(),
+            "#.##...#...".to_string(),
+            "#...##....#".to_string(),
+            ".#..#...#.#".to_string(),
+        ];
+
+        let expected = 336;
+
+        assert_eq!(expected, part2(&input).unwrap())
     }
 }
