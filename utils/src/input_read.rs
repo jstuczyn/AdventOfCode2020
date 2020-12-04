@@ -47,6 +47,6 @@ pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
     Ok(results)
 }
 
-pub fn read_to_string<P>(path: P) -> io::Result<String> {
+pub fn read_to_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
     fs::read_to_string(path)
 }
