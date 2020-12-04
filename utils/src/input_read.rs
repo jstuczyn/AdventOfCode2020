@@ -14,15 +14,15 @@
 
 use std::path::Path;
 use std::fmt::Debug;
-use std::fs::File;
+use std::fs::{File, self};
 use std::str::FromStr;
 use std::io::{self, BufRead};
 
 pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
-where
-    P: AsRef<Path>,
-    T: FromStr,
-    <T as FromStr>::Err: Debug,
+    where
+        P: AsRef<Path>,
+        T: FromStr,
+        <T as FromStr>::Err: Debug,
 {
     let file = File::open(path)?;
 
@@ -45,4 +45,8 @@ where
     }
 
     Ok(results)
+}
+
+pub fn read_to_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    fs::read_to_string(path)
 }
