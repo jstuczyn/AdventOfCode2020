@@ -94,17 +94,17 @@ mod tests {
 
     #[test]
     fn seat_parsing() {
-        let seat1 = Seat::try_from("BFFFBBFRRR").unwrap();
+        let seat1 = Seat::try_from(&"BFFFBBFRRR".to_string()).unwrap();
         assert_eq!(seat1.row, 70);
         assert_eq!(seat1.column, 7);
         assert_eq!(seat1.id(), 567);
 
-        let seat2 = Seat::try_from("FFFBBBFRRR").unwrap();
+        let seat2 = Seat::try_from(&"FFFBBBFRRR".to_string()).unwrap();
         assert_eq!(seat2.row, 14);
         assert_eq!(seat2.column, 7);
         assert_eq!(seat2.id(), 119);
 
-        let seat3 = Seat::try_from("BBFFBBFRLL").unwrap();
+        let seat3 = Seat::try_from(&"BBFFBBFRLL".to_string()).unwrap();
         assert_eq!(seat3.row, 102);
         assert_eq!(seat3.column, 4);
         assert_eq!(seat3.id(), 820);
