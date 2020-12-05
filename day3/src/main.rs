@@ -56,7 +56,7 @@ impl<'a> TryFrom<&'a String> for Row {
     fn try_from(raw: &'a String) -> Result<Self, Self::Error> {
         let chars = raw.chars();
         let size_hint = chars.size_hint();
-        let mut row = Vec::with_capacity(size_hint.1.unwrap_or_else(|| size_hint.0));
+        let mut row = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
         for location in raw.chars().map(|char| char.try_into()) {
             row.push(location?);
         }
