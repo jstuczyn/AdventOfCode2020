@@ -31,7 +31,7 @@ impl TryFrom<String> for Policy {
     fn try_from(mut raw_policy: String) -> Result<Self, Self::Error> {
         // final character is a `:` so we can discard it
         // if this fails, it means provided string was empty
-        raw_policy.pop().ok_or_else(|| MalformedPolicy)?;
+        raw_policy.pop().ok_or(MalformedPolicy)?;
 
         // we are left with `lowerbound-upperbound character`
         let split: Vec<_> = raw_policy.split_whitespace().collect();
@@ -44,7 +44,7 @@ impl TryFrom<String> for Policy {
             return Err(MalformedPolicy);
         }
 
-        let character = chars_raw.first().ok_or_else(|| MalformedPolicy)?.to_owned();
+        let character = chars_raw.first().ok_or(MalformedPolicy)?.to_owned();
 
         let bound_split: Vec<_> = split[0].split('-').collect();
         if bound_split.len() != 2 {
@@ -79,13 +79,13 @@ impl Policy {
     }
 }
 
-type Password = String;
+type Password<'a> = &'a str;
 
 // input is formatted as follows:
 // `lowerbound-upperbound character: password`
 // for example: `1-3 a: abcde`
 // note that final space separates policy from password
-fn parse_into_policy_password(input_line: &String) -> Option<(Policy, Password)> {
+fn parse_into_policy_password(input_line: &str) -> Option<(Policy, Password)> {
     let split: Vec<_> = input_line.split_whitespace().collect();
 
     if split.len() != 3 {
@@ -94,7 +94,7 @@ fn parse_into_policy_password(input_line: &String) -> Option<(Policy, Password)>
 
     // we know there will be 2 chunks in policy due to the described structure
     let policy_raw = vec![split[0], split[1]].join(" ");
-    let password = split[2].to_owned();
+    let password = split[2];
     let policy = Policy::try_from(policy_raw).ok()?;
 
     Some((policy, password))
@@ -102,7 +102,7 @@ fn parse_into_policy_password(input_line: &String) -> Option<(Policy, Password)>
 
 fn part1(input: &[String]) -> Option<usize> {
     let mut valid_count = 0;
-    for policy_password in input.iter().map(parse_into_policy_password) {
+    for policy_password in input.iter().map(|input| parse_into_policy_password(input)) {
         let (policy, password) = policy_password?;
         if policy.verify_password_part1(&password) {
             valid_count += 1;
@@ -113,7 +113,7 @@ fn part1(input: &[String]) -> Option<usize> {
 
 fn part2(input: &[String]) -> Option<usize> {
     let mut valid_count = 0;
-    for policy_password in input.iter().map(parse_into_policy_password) {
+    for policy_password in input.iter().map(|input| parse_into_policy_password(input)) {
         let (policy, password) = policy_password?;
         if policy.verify_password_part2(&password) {
             valid_count += 1;

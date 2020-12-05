@@ -71,10 +71,10 @@ impl Height {
 
     pub(super) fn validate_in_passport(&self) -> bool {
         let value = self.value();
-        if self.is_metric() && (value < 150 || value > 193) {
+        if self.is_metric() && !(150..=193).contains(&value) {
             return false;
         }
-        if self.is_imperial() && (value < 59 || value > 76) {
+        if self.is_imperial() && !(59..=76).contains(&value) {
             return false;
         }
         true

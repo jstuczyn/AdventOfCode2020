@@ -84,7 +84,7 @@ fn part2(input: &[String]) -> Option<usize> {
         .map(|seat| seat.unwrap().id())
         .collect();
 
-    seat_ids.sort();
+    seat_ids.sort_unstable();
     let mut gaps = Vec::new();
     for (&prev_seat_id, &next_seat_id) in seat_ids.iter().tuple_windows() {
         if prev_seat_id + 1 != next_seat_id {

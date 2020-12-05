@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::Path;
 use std::fmt::Debug;
-use std::fs::{File, self};
-use std::str::FromStr;
+use std::fs::{self, File};
 use std::io::{self, BufRead};
+use std::path::Path;
+use std::str::FromStr;
 
 pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
-    where
-        P: AsRef<Path>,
-        T: FromStr,
-        <T as FromStr>::Err: Debug,
+where
+    P: AsRef<Path>,
+    T: FromStr,
+    <T as FromStr>::Err: Debug,
 {
     let file = File::open(path)?;
 
@@ -30,7 +30,7 @@ pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
     let size_hint = lines.size_hint();
 
     // use upper bound size hint if available, otherwise use lower bound
-    let mut results = Vec::with_capacity(size_hint.1.unwrap_or_else(|| size_hint.0));
+    let mut results = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
     for line in lines {
         // the last one is technically not an io error, but I can't be bothered to create a separate error type just for this
         results.push(line?.parse().map_err(|parse_err| {
