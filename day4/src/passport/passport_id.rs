@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn passport_id_validation() {
         let valid = vec!["000000001", "600304001"];
-        let invalid = vec!["", "0123456789", "00000001"];
+        let invalid = vec!["", "0123456789", "00000001", "aaaaaaaaa"];
 
         for valid in valid {
             assert!(PassportId(valid.to_string()).validate_in_passport())

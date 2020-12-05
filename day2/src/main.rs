@@ -122,6 +122,7 @@ fn part2(input: &[String]) -> Option<usize> {
     Some(valid_count)
 }
 
+#[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_line_input("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
@@ -157,5 +158,26 @@ mod tests {
         let expected = 1;
 
         assert_eq!(expected, part2(&input).unwrap())
+    }
+
+    #[cfg(test)]
+    mod policy_parsing {
+        use super::*;
+
+        #[test]
+        fn returns_err_on_malformed_policies() {
+            assert!(Policy::try_from("1- 3 a:".to_string()).is_err());
+            assert!(Policy::try_from("1-3 ab:".to_string()).is_err());
+            assert!(Policy::try_from("1-2-3 a:".to_string()).is_err());
+            assert!(Policy::try_from("1-a a:".to_string()).is_err());
+            assert!(Policy::try_from("a-3 a:".to_string()).is_err());
+            assert!(Policy::try_from("a-3 a".to_string()).is_err());
+            assert!(Policy::try_from("a-3 :".to_string()).is_err());
+        }
+
+        #[test]
+        fn returns_none_on_malformed_policy_passwords() {
+            assert!(parse_into_policy_password("1-3 a: abcde foo").is_none());
+        }
     }
 }

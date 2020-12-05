@@ -100,4 +100,29 @@ mod tests {
         assert!(Height::try_from("a60cm").is_err());
         assert!(Height::try_from("60").is_err());
     }
+
+    #[test]
+    fn passport_validation() {
+        let good_metric = [150, 170, 193];
+        let bad_metric = [149, 194, 0, 2000];
+
+        let good_imperial = [59, 65, 67];
+        let bad_imperial = [58, 77, 0, 321];
+
+        for good in good_metric.iter() {
+            assert!(Height::Metric(*good).validate_in_passport())
+        }
+
+        for bad in bad_metric.iter() {
+            assert!(!Height::Metric(*bad).validate_in_passport())
+        }
+
+        for good in good_imperial.iter() {
+            assert!(Height::Imperial(*good).validate_in_passport())
+        }
+
+        for bad in bad_imperial.iter() {
+            assert!(!Height::Imperial(*bad).validate_in_passport())
+        }
+    }
 }
