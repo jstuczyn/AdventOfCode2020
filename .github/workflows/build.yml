@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.rust == 'nightly' }}
     strategy:
-    matrix:
-      rust:
-        - stable
-        - beta
-        - nightly
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
 
     steps:
       - uses: actions/checkout@v2

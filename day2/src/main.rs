@@ -31,7 +31,7 @@ impl TryFrom<String> for Policy {
     fn try_from(mut raw_policy: String) -> Result<Self, Self::Error> {
         // final character is a `:` so we can discard it
         // if this fails, it means provided string was empty
-        raw_policy.pop().ok_or_else(|| MalformedPolicy)?;
+        raw_policy.pop().ok_or(MalformedPolicy)?;
 
         // we are left with `lowerbound-upperbound character`
         let split: Vec<_> = raw_policy.split_whitespace().collect();
@@ -44,7 +44,7 @@ impl TryFrom<String> for Policy {
             return Err(MalformedPolicy);
         }
 
-        let character = chars_raw.first().ok_or_else(|| MalformedPolicy)?.to_owned();
+        let character = chars_raw.first().ok_or(MalformedPolicy)?.to_owned();
 
         let bound_split: Vec<_> = split[0].split('-').collect();
         if bound_split.len() != 2 {
