@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use itertools::Itertools;
 use std::convert::TryFrom;
 use utils::input_read;
 
@@ -76,7 +77,27 @@ fn part1(input: &[String]) -> Option<usize> {
 }
 
 fn part2(input: &[String]) -> Option<usize> {
-    None
+    let mut seat_ids: Vec<_> = input
+        .iter()
+        .map(Seat::try_from)
+        .filter(Result::is_ok)
+        .map(|seat| seat.unwrap().id())
+        .collect();
+
+    seat_ids.sort();
+    let mut gaps = Vec::new();
+    for (&prev_seat_id, &next_seat_id) in seat_ids.iter().tuple_windows() {
+        if prev_seat_id + 1 != next_seat_id {
+            gaps.push(prev_seat_id + 1);
+        }
+    }
+
+    if gaps.len() != 1 && !gaps.is_empty() {
+        eprintln!("found multiple possible seat locations! - {:?}", gaps);
+        None
+    } else {
+        gaps.pop()
+    }
 }
 
 fn main() {
