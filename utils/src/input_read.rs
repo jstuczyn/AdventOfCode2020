@@ -30,7 +30,7 @@ where
     let size_hint = lines.size_hint();
 
     // use upper bound size hint if available, otherwise use lower bound
-    let mut results = Vec::with_capacity(size_hint.1.unwrap_or_else(|| size_hint.0));
+    let mut results = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
     for line in lines {
         // the last one is technically not an io error, but I can't be bothered to create a separate error type just for this
         results.push(line?.parse().map_err(|parse_err| {

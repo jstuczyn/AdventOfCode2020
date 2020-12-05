@@ -41,13 +41,13 @@ pub(crate) enum MalformedPassport {
 
 impl From<InvalidHeight> for MalformedPassport {
     fn from(err: InvalidHeight) -> Self {
-        MalformedPassport::MalformedData(format!("invalid height - {:?}", err).to_string())
+        MalformedPassport::MalformedData(format!("invalid height - {:?}", err))
     }
 }
 
 impl From<InvalidEyeColor> for MalformedPassport {
     fn from(err: InvalidEyeColor) -> Self {
-        MalformedPassport::MalformedData(format!("invalid height - {:?}", err).to_string())
+        MalformedPassport::MalformedData(format!("invalid height - {:?}", err))
     }
 }
 
@@ -132,7 +132,7 @@ impl<'a> TryFrom<&'a str> for RawPassport {
         let mut country_id = None;
 
         for field in fields {
-            let name_value = field.split(":").collect::<Vec<_>>();
+            let name_value = field.split(':').collect::<Vec<_>>();
             if name_value.len() != 2 {
                 return Err(MalformedPassport::MalformedData(format!(
                     "invalid field: {}",
