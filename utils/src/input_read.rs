@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::Path;
 use std::fmt::Debug;
-use std::fs::{File, self};
-use std::str::FromStr;
+use std::fs::{self, File};
 use std::io::{self, BufRead};
+use std::path::Path;
+use std::str::FromStr;
 
 pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
-    where
-        P: AsRef<Path>,
-        T: FromStr,
-        <T as FromStr>::Err: Debug,
+where
+    P: AsRef<Path>,
+    T: FromStr,
+    <T as FromStr>::Err: Debug,
 {
     let file = File::open(path)?;
 
