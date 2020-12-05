@@ -40,6 +40,7 @@ fn part2(input: &[usize]) -> Option<usize> {
     None
 }
 
+#[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_line_input("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
@@ -62,10 +63,20 @@ mod tests {
     }
 
     #[test]
+    fn part1_fails_on_invalid_input() {
+        assert!(part1(&[1, 2, 3]).is_none())
+    }
+
+    #[test]
     fn part2_sample_input() {
         let input = vec![1721, 979, 366, 299, 675, 1456];
         let expected = 241861950;
 
         assert_eq!(expected, part2(&input).unwrap())
+    }
+
+    #[test]
+    fn part2_fails_on_invalid_input() {
+        assert!(part2(&[1, 2, 3]).is_none())
     }
 }

@@ -162,6 +162,7 @@ fn part2(input: &[String]) -> Option<usize> {
     Some(running_total)
 }
 
+#[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_line_input("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
@@ -215,5 +216,15 @@ mod tests {
         let expected = 336;
 
         assert_eq!(expected, part2(&input).unwrap())
+    }
+
+    #[test]
+    fn fails_to_parse_invalid_location() {
+        assert!(Location::try_from('a').is_err())
+    }
+
+    #[test]
+    fn grid_returns_0_row_if_empty() {
+        assert_eq!(0, Grid(Vec::new()).row_len())
     }
 }

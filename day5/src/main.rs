@@ -25,7 +25,8 @@ const LOW_BIT_COLUMN: char = 'L';
 struct MalformedSeat;
 
 struct Seat {
-    row: u8,    // restricted from 0 to 127, i.e. 7 bit value
+    row: u8,
+    // restricted from 0 to 127, i.e. 7 bit value
     column: u8, // restricted from 0 to 7, i.e. 3 bit value
 }
 
@@ -100,6 +101,7 @@ fn part2(input: &[String]) -> Option<usize> {
     }
 }
 
+#[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_line_input("input").expect("failed to read input file");
     let part1_result = part1(&input).expect("failed to solve part1");
@@ -129,5 +131,31 @@ mod tests {
         assert_eq!(seat3.row, 102);
         assert_eq!(seat3.column, 4);
         assert_eq!(seat3.id(), 820);
+    }
+
+    #[test]
+    fn sample_part1_input() {
+        let input = vec![
+            "BFFFBBFRRR".to_string(),
+            "FFFBBBFRRR".to_string(),
+            "BBFFBBFRLL".to_string(),
+        ];
+
+        let expected = 820;
+
+        assert_eq!(expected, part1(&input).unwrap());
+    }
+
+    #[test]
+    fn sample_part2_input() {
+        let input = vec![
+            "BFFFBBFRRR".to_string(), // 567
+            "BFFFBBFRRL".to_string(), // 566
+            "BFFFBBFRLL".to_string(), // 564
+        ];
+
+        let expected = 565;
+
+        assert_eq!(expected, part2(&input).unwrap());
     }
 }

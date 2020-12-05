@@ -39,6 +39,7 @@ fn part2(input: &str) -> usize {
         .count()
 }
 
+#[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_to_string("input").expect("failed to read input file");
     let part1_result = part1(&input);
