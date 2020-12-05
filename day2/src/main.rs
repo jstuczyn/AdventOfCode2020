@@ -44,7 +44,7 @@ impl TryFrom<String> for Policy {
             return Err(MalformedPolicy);
         }
 
-        let character = chars_raw.first().ok_or(MalformedPolicy)?.to_owned();
+        let character = chars_raw.first().ok_or(|| MalformedPolicy)?.to_owned();
 
         let bound_split: Vec<_> = split[0].split('-').collect();
         if bound_split.len() != 2 {
