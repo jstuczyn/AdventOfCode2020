@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::passport::{MalformedPassport, Passport, RawPassport};
+use crate::passport::{Passport, RawPassport};
 use std::convert::TryFrom;
 use utils::input_read;
 
 mod passport;
 
-fn to_raw_passports(raw_data: &str) -> Vec<Result<RawPassport, MalformedPassport>> {
-    raw_data.split("\n\n").map(RawPassport::try_from).collect()
-}
-
-fn part1(input: &str) -> usize {
-    to_raw_passports(input)
-        .into_iter()
+fn part1(input: &[String]) -> usize {
+    input
+        .iter()
+        .map(RawPassport::try_from)
         .filter(Result::is_ok)
         .count()
 }
 
-fn part2(input: &str) -> usize {
-    to_raw_passports(input)
-        .into_iter()
+fn part2(input: &[String]) -> usize {
+    input
+        .iter()
+        .map(RawPassport::try_from)
         .filter(Result::is_ok)
         .map(|raw_pass| Passport::try_from(raw_pass.unwrap()))
         .filter(Result::is_ok)
@@ -41,7 +39,7 @@ fn part2(input: &str) -> usize {
 
 #[cfg(not(tarpaulin))]
 fn main() {
-    let input = input_read::read_to_string("input").expect("failed to read input file");
+    let input = input_read::read_into_string_groups("input").expect("failed to read input file");
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 

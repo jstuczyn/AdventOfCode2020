@@ -18,6 +18,7 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::FromStr;
 
+/// Reads the file as lines, parsing each of them into desired type.
 pub fn read_line_input<T, P>(path: P) -> io::Result<Vec<T>>
 where
     P: AsRef<Path>,
@@ -47,6 +48,13 @@ where
     Ok(results)
 }
 
+/// Reads the file as a String
 pub fn read_to_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
     fs::read_to_string(path)
+}
+
+/// Reads the file and outputs String groups that were originally separated by an empty line
+pub fn read_into_string_groups<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
+    fs::read_to_string(path)
+        .map(|string| string.split("\n\n").map(|split| split.to_owned()).collect())
 }
