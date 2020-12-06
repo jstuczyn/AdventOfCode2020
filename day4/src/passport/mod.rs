@@ -122,10 +122,10 @@ pub(crate) struct RawPassport {
     country_id: Option<usize>,
 }
 
-impl<'a> TryFrom<&'a str> for RawPassport {
+impl<'a> TryFrom<&'a String> for RawPassport {
     type Error = MalformedPassport;
 
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+    fn try_from(value: &'a String) -> Result<Self, Self::Error> {
         let fields = value.split_ascii_whitespace();
 
         let mut mandatory_passport_fields = HashMap::new();
