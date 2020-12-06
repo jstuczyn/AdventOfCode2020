@@ -12,6 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashSet;
+use utils::input_read;
+
+struct Group(HashSet<char>);
+
+impl<'a> From<&'a String> for Group {
+    fn from(answers: &'a String) -> Self {
+        let mut unique_answers = HashSet::new();
+        answers
+            .split_ascii_whitespace()
+            .flat_map(|answer| answer.chars())
+            .for_each(|char| {
+                unique_answers.insert(char);
+            });
+        Group(unique_answers)
+    }
+}
+
+impl Group {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+fn part1(input: &[String]) -> usize {
+    input
+        .iter()
+        .map(|group_answers| Group::from(group_answers).len())
+        .sum()
+}
+
+fn part2(input: &[String]) -> Option<usize> {
+    None
+}
+
+#[cfg(not(tarpaulin))]
 fn main() {
-    println!("Hello, world!");
+    let input = input_read::read_into_string_groups("input").expect("failed to read input file");
+    let part1_result = part1(&input);
+    println!("Part 1 result is {}", part1_result);
+
+    // let part2_result = part2(&input);
+    // println!("Part 2 result is {}", part2_result);
 }
