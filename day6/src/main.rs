@@ -24,18 +24,13 @@ impl<'a> From<&'a String> for Group {
     fn from(answers_raw: &'a String) -> Self {
         let mut answers = HashMap::new();
 
-        let mut size = 0;
+        let group_answers: Vec<_> = answers_raw.split_ascii_whitespace().collect();
+        let size = group_answers.len();
 
-        answers_raw
-            .split_ascii_whitespace()
-            .flat_map(|answer| {
-                size += 1;
-                answer.chars()
-            })
-            .for_each(|char| {
-                let count = answers.entry(char).or_insert(0);
-                *count += 1;
-            });
+        group_answers
+            .into_iter()
+            .flat_map(|answer| answer.chars())
+            .for_each(|char| *answers.entry(char).or_insert(0) += 1);
 
         Group { size, answers }
     }
