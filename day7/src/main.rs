@@ -21,16 +21,15 @@ use utils::input_read;
 const EMPTY_BAG: &str = "no other";
 const TARGET_BAG: &str = "shiny gold";
 
-struct Traversal<'a> {
+struct Part1Traversal<'a> {
     visited: HashSet<String>,
     graph: &'a BagGraph,
 }
 
-impl<'a> Traversal<'a> {
+impl<'a> Part1Traversal<'a> {
     fn new(graph: &'a BagGraph) -> Self {
-        Traversal {
+        Part1Traversal {
             visited: HashSet::new(),
-            // direct_parents: Vec::new(),
             graph,
         }
     }
@@ -52,6 +51,31 @@ impl<'a> Traversal<'a> {
         }
 
         self.visited.clone()
+    }
+}
+
+struct Part2Traversal<'a> {
+    graph: &'a BagGraph,
+}
+
+impl<'a> Part2Traversal<'a> {
+    fn new(graph: &'a BagGraph) -> Self {
+        Part2Traversal { graph }
+    }
+
+    fn visit_entry(&mut self, entry: &Rc<RefCell<Bag>>) -> usize {
+        let mut branch_bags = 1;
+
+        for child in &entry.borrow().inner {
+            branch_bags += child.count * self.visit_entry(&child.bag);
+        }
+
+        branch_bags
+    }
+
+    fn get_total_bags(&mut self, bag_name: &str) -> usize {
+        let entry = self.graph.nodes.get(bag_name).unwrap();
+        self.visit_entry(entry) - 1
     }
 }
 
@@ -191,12 +215,20 @@ fn part1(input: &[String]) -> usize {
         .map(parse_rule)
         .for_each(|rule| graph.insert_rule(rule.0, rule.1));
 
-    Traversal::new(&graph).get_unique_parents(TARGET_BAG).len()
+    Part1Traversal::new(&graph)
+        .get_unique_parents(TARGET_BAG)
+        .len()
 }
 
-// fn part2(input: &[String]) -> usize {
-//     0
-// }
+fn part2(input: &[String]) -> usize {
+    let mut graph = BagGraph::new();
+    input
+        .iter()
+        .map(parse_rule)
+        .for_each(|rule| graph.insert_rule(rule.0, rule.1));
+
+    Part2Traversal::new(&graph).get_total_bags(TARGET_BAG)
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -204,9 +236,9 @@ fn main() {
 
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
-    //
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -230,5 +262,41 @@ mod tests {
         let expected = 4;
 
         assert_eq!(expected, part1(&input));
+    }
+
+    #[test]
+    fn sample_part2_input1() {
+        let input = vec![
+            "light red bags contain 1 bright white bag, 2 muted yellow bags.".to_string(),
+            "dark orange bags contain 3 bright white bags, 4 muted yellow bags.".to_string(),
+            "bright white bags contain 1 shiny gold bag.".to_string(),
+            "muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.".to_string(),
+            "shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.".to_string(),
+            "dark olive bags contain 3 faded blue bags, 4 dotted black bags.".to_string(),
+            "vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.".to_string(),
+            "faded blue bags contain no other bags.".to_string(),
+            "dotted black bags contain no other bags.".to_string(),
+        ];
+
+        let expected = 32;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn sample_part2_input2() {
+        let input = vec![
+            "shiny gold bags contain 2 dark red bags.".to_string(),
+            "dark red bags contain 2 dark orange bags.".to_string(),
+            "dark orange bags contain 2 dark yellow bags.".to_string(),
+            "dark yellow bags contain 2 dark green bags.".to_string(),
+            "dark green bags contain 2 dark blue bags.".to_string(),
+            "dark blue bags contain 2 dark violet bags.".to_string(),
+            "dark violet bags contain no other bags.".to_string(),
+        ];
+
+        let expected = 126;
+
+        assert_eq!(expected, part2(&input));
     }
 }
