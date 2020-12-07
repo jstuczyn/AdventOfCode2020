@@ -177,7 +177,7 @@ impl Debug for BagInner {
     }
 }
 
-fn into_count_and_name(raw_bag: &str) -> Option<(usize, String)> {
+fn into_count_and_name(raw_bag: &str) -> Option<BagInnerRaw> {
     if raw_bag.starts_with(EMPTY_BAG) {
         return None;
     }
@@ -193,7 +193,7 @@ fn into_count_and_name(raw_bag: &str) -> Option<(usize, String)> {
     Some((count, name))
 }
 
-fn parse_rule(rule: &String) -> (String, Vec<BagInnerRaw>) {
+fn parse_rule(rule: &str) -> (String, Vec<BagInnerRaw>) {
     let split: Vec<_> = rule.split("contain").collect();
     let bag_name = split[0].trim().trim_end_matches(" bags").to_owned();
 
@@ -212,7 +212,7 @@ fn part1(input: &[String]) -> usize {
     let mut graph = BagGraph::new();
     input
         .iter()
-        .map(parse_rule)
+        .map(|rule| parse_rule(rule))
         .for_each(|rule| graph.insert_rule(rule.0, rule.1));
 
     Part1Traversal::new(&graph)
@@ -224,7 +224,7 @@ fn part2(input: &[String]) -> usize {
     let mut graph = BagGraph::new();
     input
         .iter()
-        .map(parse_rule)
+        .map(|rule| parse_rule(rule))
         .for_each(|rule| graph.insert_rule(rule.0, rule.1));
 
     Part2Traversal::new(&graph).get_total_bags(TARGET_BAG)
