@@ -284,4 +284,40 @@ mod tests {
 
         assert_eq!(expected, part2(&input).unwrap())
     }
+
+    #[test]
+    fn instruction_formatting() {
+        assert_eq!(
+            "jmp 2",
+            format!(
+                "{:?}",
+                Instruction {
+                    opcode: Opcode::Jump,
+                    operand: 2
+                }
+            )
+        );
+
+        assert_eq!(
+            "nop -3",
+            format!(
+                "{:?}",
+                Instruction {
+                    opcode: Opcode::Nop,
+                    operand: -3
+                }
+            )
+        );
+
+        assert_eq!(
+            "acc 5",
+            format!(
+                "{:?}",
+                Instruction {
+                    opcode: Opcode::Acc,
+                    operand: 5
+                }
+            )
+        )
+    }
 }
