@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use itertools::Itertools;
+use std::collections::HashMap;
 use utils::input_read;
 
 fn part1(input: &[usize]) -> usize {
@@ -43,9 +44,58 @@ fn part1(input: &[usize]) -> usize {
     one_jolt_diffs * three_jolt_diffs
 }
 
-// fn part2(input: &[usize]) -> Option<usize> {
-//     None
-// }
+#[inline]
+fn path_cost(
+    node: usize,
+    connection_map: &HashMap<usize, Vec<usize>>,
+    cost_map: &mut HashMap<usize, usize>,
+) -> usize {
+    // if we have value in cache - return it
+    if let Some(cost) = cost_map.get(&node) {
+        return *cost;
+    }
+    // if it has any children, it's the sum of the cost of the children
+    if let Some(children) = connection_map.get(&node) {
+        let cost = children
+            .iter()
+            .map(|child| path_cost(*child, connection_map, cost_map))
+            .sum();
+        cost_map.insert(node, cost);
+        cost
+    } else {
+        1
+    }
+}
+
+fn part2(input: &[usize]) -> usize {
+    // note that device always only has a single valid parent, i.e. highest adapter
+    let mut valid_adapters = input
+        .iter()
+        .copied()
+        .chain(std::iter::once(0))
+        .collect_vec();
+    valid_adapters.sort_unstable();
+
+    let mut connection_map = HashMap::with_capacity(valid_adapters.len() - 1);
+
+    // for each adapter
+    'outer: for (i, adapter) in valid_adapters.iter().enumerate() {
+        // find it's children, i.e. other adapters that can be connected to it
+        for potential_child in &valid_adapters[i + 1..] {
+            if *adapter + 3 >= *potential_child {
+                let children = connection_map.entry(*adapter).or_insert_with(Vec::new);
+                children.push(*potential_child);
+            } else {
+                // vec is sorted so we won't find anything there
+                continue 'outer;
+            }
+        }
+    }
+
+    let mut cost_map = HashMap::with_capacity(connection_map.len());
+
+    path_cost(0, &connection_map, &mut cost_map)
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -53,9 +103,9 @@ fn main() {
 
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
-    //
-    // let part2_result = part2(&input).expect("failed to solve part2");
-    // println!("Part 2 result is {}", part2_result);
+
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -81,5 +131,26 @@ mod tests {
         let expected = 220;
 
         assert_eq!(expected, part1(&input))
+    }
+
+    #[test]
+    fn part2_sample_input1() {
+        let input = vec![16, 10, 15, 5, 1, 11, 7, 19, 6, 12, 4];
+
+        let expected = 8;
+
+        assert_eq!(expected, part2(&input))
+    }
+
+    #[test]
+    fn part2_sample_input2() {
+        let input = vec![
+            28, 33, 18, 42, 31, 14, 46, 20, 48, 47, 24, 23, 49, 45, 19, 38, 39, 11, 1, 32, 25, 35,
+            8, 17, 7, 9, 4, 2, 34, 10, 3,
+        ];
+
+        let expected = 19208;
+
+        assert_eq!(expected, part2(&input))
     }
 }
