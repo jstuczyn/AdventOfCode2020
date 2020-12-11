@@ -325,4 +325,26 @@ mod tests {
 
         assert_eq!(expected, part2(&input))
     }
+
+    #[test]
+    fn display_works_as_expected() {
+        let input = vec![
+            "L.LL.LL.LL".to_string(),
+            "LLLLLLL.LL".to_string(),
+            "L.L.L..L..".to_string(),
+            "LLLL.LL.LL".to_string(),
+            "L.LL.LL.LL".to_string(),
+            "L.LLLLL.LL".to_string(),
+            "..L.L.....".to_string(),
+            "LLLLLLLLLL".to_string(),
+            "L.LLLLLL.L".to_string(),
+            "L.LLLLL.LL".to_string(),
+        ];
+        let grid = SeatGrid::from(&*input);
+
+        let mut expected = input.join("\n");
+        expected.push('\n');
+
+        assert_eq!(expected, format!("{}", grid));
+    }
 }
