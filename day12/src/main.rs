@@ -26,6 +26,8 @@ const LEFT_DIRECTION: char = 'L';
 const RIGHT_DIRECTION: char = 'R';
 const FORWARD_DIRECTION: char = 'F';
 
+type Position = (isize, isize);
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum Direction {
     North,
@@ -87,74 +89,112 @@ impl Display for Action {
 }
 
 impl Action {
-    fn is_rotate(&self) -> bool {
+    fn is_rotation(&self) -> bool {
         matches!(self.direction, Direction::Left | Direction::Right)
+    }
+
+    fn is_translation(&self) -> bool {
+        matches!(
+            self.direction,
+            Direction::North | Direction::East | Direction::South | Direction::West
+        )
     }
 }
 
+#[derive(Eq, PartialEq)]
+enum NavigationMode {
+    Absolute,
+    Waypoint,
+}
+
 struct Ship {
-    position: (isize, isize),
-    facing_direction: Direction,
+    position: Position,
+    waypoint: Waypoint,
+    mode: NavigationMode,
 }
 
 impl Ship {
-    fn new() -> Self {
+    fn new(waypoint_position: Position, mode: NavigationMode) -> Self {
         Ship {
             position: (0, 0),
-            facing_direction: Direction::East,
+            waypoint: Waypoint {
+                relative_position: waypoint_position,
+            },
+            mode,
         }
     }
 
     fn apply_action(&mut self, action: Action) {
-        if action.is_rotate() {
-            self.apply_rotation(action)
+        if action.is_rotation() {
+            self.waypoint.apply_rotation(action)
+        } else if action.is_translation() {
+            if self.mode == NavigationMode::Waypoint {
+                self.waypoint.apply_translation(action)
+            } else {
+                self.apply_self_translation(action)
+            }
         } else {
-            self.apply_movement(action)
+            // it must be forward
+            self.move_towards_waypoint(action);
         }
     }
 
-    fn apply_rotation(&mut self, action: Action) {
-        let directions = [
-            Direction::North,
-            Direction::East,
-            Direction::South,
-            Direction::West,
-        ];
-        let mut current_idx = 0;
-        for (i, dir) in directions.iter().enumerate() {
-            if self.facing_direction == *dir {
-                current_idx = i
-            }
-        }
-
-        let magnitude = (action.magnitude / 90) as usize;
-
-        match action.direction {
-            Direction::Right => self.facing_direction = directions[((current_idx + magnitude) % 4)],
-            Direction::Left => {
-                self.facing_direction = directions[((current_idx + 4 - magnitude) % 4)]
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn apply_movement(&mut self, action: Action) {
+    fn apply_self_translation(&mut self, action: Action) {
         match action.direction {
             Direction::North => self.position.1 += action.magnitude,
             Direction::South => self.position.1 -= action.magnitude,
             Direction::East => self.position.0 += action.magnitude,
             Direction::West => self.position.0 -= action.magnitude,
-            Direction::Forward => self.apply_movement(Action {
-                direction: self.facing_direction,
-                magnitude: action.magnitude,
-            }),
+            _ => unreachable!(),
+        }
+    }
+
+    fn move_towards_waypoint(&mut self, action: Action) {
+        debug_assert_eq!(action.direction, Direction::Forward);
+        let (x, y) = self.position;
+        let dx = self.waypoint.relative_position.0 * action.magnitude;
+        let dy = self.waypoint.relative_position.1 * action.magnitude;
+        self.position = (x + dx, y + dy)
+    }
+}
+
+struct Waypoint {
+    relative_position: Position,
+}
+
+impl Waypoint {
+    fn apply_rotation(&mut self, action: Action) {
+        let magnitude = if action.direction == Direction::Right {
+            action.magnitude
+        } else {
+            360 - action.magnitude
+        };
+
+        let (x, y) = self.relative_position;
+        match magnitude {
+            90 => self.relative_position = (y, -x),
+            180 => self.relative_position = (-x, -y),
+            270 => self.relative_position = (-y, x),
+            360 => (),
+            v => panic!("invalid rotation - {}", v),
+        }
+    }
+
+    fn apply_translation(&mut self, action: Action) {
+        debug_assert!(action.is_translation());
+        match action.direction {
+            Direction::North => self.relative_position.1 += action.magnitude,
+            Direction::South => self.relative_position.1 -= action.magnitude,
+            Direction::East => self.relative_position.0 += action.magnitude,
+            Direction::West => self.relative_position.0 -= action.magnitude,
             _ => unreachable!(),
         }
     }
 }
 
 fn part1(input: &[String]) -> usize {
-    let mut ship = Ship::new();
+    let mut ship = Ship::new((1, 0), NavigationMode::Absolute);
+
     input
         .iter()
         .map(Action::from)
@@ -163,9 +203,16 @@ fn part1(input: &[String]) -> usize {
     (ship.position.0.abs() + ship.position.1.abs()) as usize
 }
 
-// fn part2(input: &[String]) -> usize {
-//     0
-// }
+fn part2(input: &[String]) -> usize {
+    let mut ship = Ship::new((10, 1), NavigationMode::Waypoint);
+
+    input
+        .iter()
+        .map(Action::from)
+        .for_each(|action| ship.apply_action(action));
+
+    (ship.position.0.abs() + ship.position.1.abs()) as usize
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -174,8 +221,8 @@ fn main() {
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -195,5 +242,20 @@ mod tests {
         let expected = 25;
 
         assert_eq!(expected, part1(&input));
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            "F10".to_string(),
+            "N3".to_string(),
+            "F7".to_string(),
+            "R90".to_string(),
+            "F11".to_string(),
+        ];
+
+        let expected = 286;
+
+        assert_eq!(expected, part2(&input));
     }
 }
