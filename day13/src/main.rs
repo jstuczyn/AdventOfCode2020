@@ -26,6 +26,7 @@ impl Bus {
         }
     }
 
+    // used for part1
     fn earliest_departure_from(&self, timestamp: usize) -> usize {
         // assume id < timestamp
         let quo = timestamp / self.id;
@@ -45,7 +46,7 @@ fn split_into_timestamp_and_buses(input: &str) -> (usize, Vec<Option<Bus>>) {
     assert_eq!(2, split.len(), "invalid input");
 
     let timestamp = split[0].parse().expect("failed to parse timestamp");
-    let buses = split[1].split(",").map(Bus::new).collect();
+    let buses = split[1].split(',').map(Bus::new).collect();
 
     (timestamp, buses)
 }
@@ -61,9 +62,57 @@ fn part1(input: &str) -> usize {
     id * (departure - timestamp)
 }
 
-// fn part2(input: &[String]) -> usize {
-//     0
-// }
+#[allow(clippy::many_single_char_names)]
+// code was originally adapted from https://rosettacode.org/wiki/Chinese_remainder_theorem#Rust
+fn egcd(a: isize, b: isize) -> (isize, isize, isize) {
+    if a == 0 {
+        (b, 0, 1)
+    } else {
+        let (g, x, y) = egcd(b % a, a);
+        (g, y - (b / a) * x, x)
+    }
+}
+
+// code was originally adapted from https://rosettacode.org/wiki/Chinese_remainder_theorem#Rust
+fn mod_inv(x: isize, n: isize) -> Option<isize> {
+    let (g, x, _) = egcd(x, n);
+    if g == 1 {
+        Some((x % n + n) % n)
+    } else {
+        None
+    }
+}
+
+// code was originally adapted from https://rosettacode.org/wiki/Chinese_remainder_theorem#Rust
+fn crt(residues: &[isize], modulii: &[isize]) -> Option<isize> {
+    let prod = modulii.iter().product::<isize>();
+
+    let mut sum = 0;
+
+    for (&residue, &modulus) in residues.iter().zip(modulii) {
+        let p = prod / modulus;
+        sum += residue * mod_inv(p, modulus)? * p
+    }
+
+    Some(sum % prod)
+}
+
+fn part2(input: &str) -> usize {
+    let (_, buses) = split_into_timestamp_and_buses(input);
+    let (modulii, residues): (Vec<_>, Vec<_>) = buses
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, bus)| match bus {
+            Some(bus) => Some((
+                bus.id as isize,
+                (bus.id as isize - i as isize) % bus.id as isize,
+            )),
+            None => None,
+        })
+        .unzip();
+
+    crt(&residues, &modulii).expect("failed to apply CRT") as usize
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -71,9 +120,9 @@ fn main() {
 
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
-    //
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -88,5 +137,65 @@ mod tests {
         let expected = 295;
 
         assert_eq!(expected, part1(&input));
+    }
+
+    #[test]
+    fn part2_sample_input1() {
+        let input = r#"939
+    7,13,x,x,59,x,31,19"#;
+
+        let expected = 1068781;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn part2_sample_input2() {
+        let input = r#"42
+    17,x,13,19"#;
+
+        let expected = 3417;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn part2_sample_input3() {
+        let input = r#"42
+67,7,59,61"#;
+
+        let expected = 754018;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn part2_sample_input4() {
+        let input = r#"42
+    67,x,7,59,61"#;
+
+        let expected = 779210;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn part2_sample_input5() {
+        let input = r#"42
+    67,7,x,59,61"#;
+
+        let expected = 1261476;
+
+        assert_eq!(expected, part2(&input));
+    }
+
+    #[test]
+    fn part2_sample_input6() {
+        let input = r#"42
+    1789,37,47,1889"#;
+
+        let expected = 1202161486;
+
+        assert_eq!(expected, part2(&input));
     }
 }
