@@ -13,91 +13,164 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
+use std::convert::TryInto;
 use utils::input_read;
 
-const UP_BIT: char = '1';
-const DOWN_BIT: char = '0';
-const NO_MASK: char = 'X';
+const ONE_BIT: char = '1';
+const ZERO_BIT: char = '0';
+const FLOATING_BIT: char = 'X';
 
-struct Mask(HashMap<usize, usize>);
+#[derive(Debug, Copy, Clone)]
+enum MaskBit {
+    One,
+    Zero,
+    Floating,
+}
+
+impl MaskBit {
+    fn is_floating(&self) -> bool {
+        matches!(self, MaskBit::Floating)
+    }
+}
+
+impl Into<usize> for MaskBit {
+    fn into(self) -> usize {
+        match self {
+            MaskBit::One => 1,
+            MaskBit::Zero => 0,
+            MaskBit::Floating => panic!("tried to convert 'floating' mask into usize!"),
+        }
+    }
+}
+
+struct Mask([MaskBit; 36]);
 
 impl From<&String> for Mask {
     fn from(raw_mask: &String) -> Self {
-        let mask = raw_mask
-            .trim_start_matches("mask = ")
-            .chars()
-            .rev()
-            .enumerate();
-        let mut mask_map = HashMap::new();
-        for (i, c) in mask {
+        let mask = raw_mask.trim_start_matches("mask = ").chars().rev();
+
+        // since TryFrom<Vec<T>> for [T; N] was stabilised, we can just use that to ensure correct length
+        let mut mask_bits = Vec::with_capacity(36);
+
+        for c in mask {
             match c {
-                UP_BIT => mask_map.insert(i, 1),
-                DOWN_BIT => mask_map.insert(i, 0),
-                NO_MASK => continue,
+                ONE_BIT => mask_bits.push(MaskBit::One),
+                ZERO_BIT => mask_bits.push(MaskBit::Zero),
+                FLOATING_BIT => mask_bits.push(MaskBit::Floating),
                 _ => panic!("unexpected mask character - {}", c),
             };
         }
 
-        Mask(mask_map)
+        Mask(mask_bits.try_into().expect("failed to parse mask"))
     }
 }
 
-struct MemoryValue {
-    address: usize,
-    value: usize,
-}
+type MemoryAddress = usize;
+type MemoryValue = usize;
 
-impl From<&String> for MemoryValue {
-    fn from(raw: &String) -> Self {
-        let without_prefix = raw.trim_start_matches("mem[");
-        let address_value: Vec<_> = without_prefix.split("] = ").collect();
-        Self {
-            address: address_value[0]
-                .parse()
-                .expect("failed to parse memory address"),
-            value: address_value[1]
-                .parse()
-                .expect("failed to parse memory value"),
+#[derive(Debug)]
+struct Memory(HashMap<MemoryAddress, MemoryValue>);
+
+impl Memory {
+    fn new() -> Self {
+        Memory(Default::default())
+    }
+
+    fn write_with_value_mask(&mut self, address: MemoryAddress, value: MemoryValue, mask: &Mask) {
+        let mut init = value;
+        for (i, &bit) in mask.0.iter().enumerate() {
+            if !bit.is_floating() {
+                init = (init & !(1 << i)) | (Into::<usize>::into(bit) << i);
+            }
+        }
+        self.0.insert(address, init);
+    }
+
+    fn write_with_address_mask(&mut self, address: MemoryAddress, value: MemoryValue, mask: &Mask) {
+        let mut target_addresses = vec![address];
+
+        for (i, &bit) in mask.0.iter().enumerate() {
+            match bit {
+                // If the bitmask bit is 0, the corresponding memory address bit is unchanged.
+                MaskBit::Zero => (),
+                // If the bitmask bit is 1, the corresponding memory address bit is overwritten with 1.
+                MaskBit::One => {
+                    for address in target_addresses.iter_mut() {
+                        *address |= 1 << i;
+                    }
+                }
+                // If the bitmask bit is X, the corresponding memory address bit is floating.
+                // Floating bits will take on all possible values.
+                MaskBit::Floating => {
+                    // set existing ones to 1, and push the 0 variants
+                    let mut new = Vec::with_capacity(target_addresses.len());
+                    for address in target_addresses.iter_mut() {
+                        new.push(*address & !(1 << i));
+                        *address |= 1 << i;
+                    }
+                    target_addresses.append(&mut new);
+                }
+            }
+        }
+
+        for address in target_addresses {
+            self.0.insert(address, value);
         }
     }
 }
 
-impl Display for MemoryValue {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "mem[{}] = {}", self.address, self.value)
-    }
+fn parse_into_address_and_value(raw: &str) -> (MemoryAddress, MemoryValue) {
+    let without_prefix = raw.trim_start_matches("mem[");
+    let address_value: Vec<_> = without_prefix.split("] = ").collect();
+    (
+        address_value[0]
+            .parse()
+            .expect("failed to parse memory address"),
+        address_value[1]
+            .parse()
+            .expect("failed to parse memory value"),
+    )
 }
 
-impl MemoryValue {
-    fn apply_bitmask(&mut self, mask: &Mask) {
-        for (i, bit) in mask.0.iter() {
-            self.value = (self.value & !(1 << i)) | (bit << i);
-        }
-    }
-}
-
-// part1 uses mask bits to substitute the memory values
 fn part1(input: &[String]) -> usize {
     let mut current_mask = None;
-    let mut memory = HashMap::new();
+    let mut memory = Memory::new();
     // first entry MUST BE a mask
     for raw in input {
         if raw.starts_with("mask") {
             current_mask = Some(Mask::from(raw))
         } else {
-            let mut mem_value = MemoryValue::from(raw);
-            mem_value.apply_bitmask(current_mask.as_ref().expect("no mask was set!"));
-            memory.insert(mem_value.address, mem_value.value);
+            let (address, value) = parse_into_address_and_value(raw);
+            memory.write_with_value_mask(
+                address,
+                value,
+                &current_mask.as_ref().expect("no mask was set!"),
+            );
         }
     }
 
-    memory.values().sum()
+    memory.0.values().sum()
 }
 
-// fn part2(input: &[String]) -> usize {
-//     0
-// }
+fn part2(input: &[String]) -> usize {
+    let mut current_mask = None;
+    let mut memory = Memory::new();
+    // first entry MUST BE a mask
+    for raw in input {
+        if raw.starts_with("mask") {
+            current_mask = Some(Mask::from(raw))
+        } else {
+            let (address, value) = parse_into_address_and_value(raw);
+            memory.write_with_address_mask(
+                address,
+                value,
+                &current_mask.as_ref().expect("no mask was set!"),
+            );
+        }
+    }
+
+    memory.0.values().sum()
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -106,8 +179,8 @@ fn main() {
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -126,5 +199,19 @@ mod tests {
         let expected = 165;
 
         assert_eq!(expected, part1(&input))
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            "mask = 000000000000000000000000000000X1001X".to_string(),
+            "mem[42] = 100".to_string(),
+            "mask = 00000000000000000000000000000000X0XX".to_string(),
+            "mem[26] = 1".to_string(),
+        ];
+
+        let expected = 208;
+
+        assert_eq!(expected, part2(&input))
     }
 }
