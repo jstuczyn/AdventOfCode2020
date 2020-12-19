@@ -174,13 +174,8 @@ fn main() {
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    let now = std::time::SystemTime::now();
     let part2_result = part2(&input);
     println!("Part 2 result is {}", part2_result);
-    println!(
-        "part2 took: {:?}",
-        std::time::SystemTime::now().duration_since(now).unwrap()
-    )
 }
 
 #[cfg(test)]
