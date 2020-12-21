@@ -108,10 +108,22 @@ fn part1(input: &[String]) -> usize {
     safe_ingredients
 }
 
-//
-// fn part2(input: &[String]) -> usize {
-// 0
-// }
+fn part2(input: &[String]) -> String {
+    let ingredient_allergens: Vec<_> = input
+        .iter()
+        .map(|raw| split_into_ingredients_and_allergens(raw))
+        .collect();
+    let allergens = Allergens::from(&*ingredient_allergens);
+
+    let mut ingredients: Vec<_> = allergens.0.into_iter().collect();
+
+    ingredients.sort_by(|(_, a1), (_, a2)| a1.cmp(a2));
+    ingredients
+        .into_iter()
+        .map(|(k, _)| k)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -120,8 +132,8 @@ fn main() {
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -140,5 +152,19 @@ mod tests {
         let expected = 5;
 
         assert_eq!(expected, part1(&input))
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            "mxmxvkd kfcds sqjhc nhms (contains dairy, fish)".to_string(),
+            "trh fvjkl sbzzf mxmxvkd (contains dairy)".to_string(),
+            "sqjhc fvjkl (contains soy)".to_string(),
+            "sqjhc mxmxvkd sbzzf (contains fish)".to_string(),
+        ];
+
+        let expected = "mxmxvkd,sqjhc,fvjkl";
+
+        assert_eq!(expected, part2(&input))
     }
 }
