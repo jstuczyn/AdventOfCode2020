@@ -122,7 +122,7 @@ fn part2(input: &[String]) -> String {
         .into_iter()
         .map(|(k, _)| k)
         .collect::<Vec<_>>()
-        .join(", ")
+        .join(",")
 }
 
 #[cfg(not(tarpaulin))]
