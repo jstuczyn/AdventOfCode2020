@@ -12,10 +12,88 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::VecDeque;
 use utils::input_read;
 
+#[derive(Debug)]
+struct Player {
+    deck: VecDeque<usize>,
+}
+
+impl From<&String> for Player {
+    fn from(raw: &String) -> Self {
+        // skip the "Player 1:" line
+        let deck = raw
+            .lines()
+            .skip(1)
+            .map(|card| card.parse().expect("failed to parse the card"))
+            .collect();
+
+        Player { deck }
+    }
+}
+
+impl Player {
+    fn play_card(&mut self) -> usize {
+        self.deck
+            .pop_front()
+            .expect("tried to play a card from an empty deck!")
+    }
+
+    fn peek_next(&self) -> Option<&usize> {
+        self.deck.get(0)
+    }
+
+    fn play_round(&mut self, other: &mut Self) -> Option<bool> {
+        if self.peek_next().is_none() {
+            // player self lost
+            return Some(false);
+        }
+        if other.peek_next().is_none() {
+            // player self won
+            return Some(true);
+        }
+
+        let played1 = self.play_card();
+        let played2 = other.play_card();
+
+        if played1 > played2 {
+            self.insert_won((played1, played2));
+        } else {
+            other.insert_won((played2, played1));
+        }
+
+        None
+    }
+
+    fn insert_won(&mut self, cards: (usize, usize)) {
+        self.deck.push_back(cards.0);
+        self.deck.push_back(cards.1);
+    }
+
+    fn calculate_final_score(&self) -> usize {
+        self.deck
+            .iter()
+            .rev()
+            .enumerate()
+            .map(|(i, card)| (i + 1) * *card)
+            .sum()
+    }
+}
+
 fn part1(input: &[String]) -> usize {
-    0
+    let mut player1 = Player::from(&input[0]);
+    let mut player2 = Player::from(&input[1]);
+
+    loop {
+        if let Some(result) = player1.play_round(&mut player2) {
+            return if result {
+                player1.calculate_final_score()
+            } else {
+                player2.calculate_final_score()
+            };
+        }
+    }
 }
 
 // fn part2(input: &[String]) -> usize {
@@ -31,4 +109,33 @@ fn main() {
 
     // let part2_result = part2(&input);
     // println!("Part 2 result is {}", part2_result);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn part1_sample_input() {
+        let input = vec![
+            r#"Player 1:
+9
+2
+6
+3
+1"#
+            .to_string(),
+            r#"Player 2:
+5
+8
+4
+7
+10"#
+            .to_string(),
+        ];
+
+        let expected = 306;
+
+        assert_eq!(expected, part1(&input));
+    }
 }
