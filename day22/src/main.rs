@@ -34,6 +34,12 @@ impl From<&String> for Player {
 }
 
 impl Player {
+    fn clone_with_n_first(&self, n: usize) -> Self {
+        Player {
+            deck: self.deck.iter().take(n).cloned().collect(),
+        }
+    }
+
     fn play_card(&mut self) -> usize {
         self.deck
             .pop_front()
@@ -85,20 +91,86 @@ impl Player {
     }
 }
 
+#[derive(Debug)]
 struct RecursiveGame {
     player1: Player,
     player2: Player,
+    previously_played: HashSet<(VecDeque<usize>, VecDeque<usize>)>,
+}
 
-    // if there was a previous round in this game that had
-    // exactly the same cards in the same order in the same players' decks,
-    // the game instantly ends in a win for player 1.
-    previously_played: HashSet<(usize, usize)>,
-    // If both players have at least as many cards
-    // remaining in their deck as the value of the card they just drew,
-    // the winner of the round is determined by playing a new game of Recursive Combat (see below).
+impl RecursiveGame {
+    fn new(player1: Player, player2: Player) -> Self {
+        RecursiveGame {
+            player1,
+            player2,
+            previously_played: HashSet::new(),
+        }
+    }
 
-    // Otherwise, at least one player must not have enough cards left in their deck to recurse;
-    // the winner of the round is the player with the higher-value card.
+    // returns whether player1 won or lost
+    fn play(&mut self) -> bool {
+        loop {
+            if let Some(result) = self.play_round() {
+                return result;
+            }
+        }
+    }
+
+    fn play_round(&mut self) -> Option<bool> {
+        let p1_peek = self.player1.peek_next();
+        let p2_peek = self.player2.peek_next();
+
+        if p1_peek.is_none() {
+            // player1 lost
+            return Some(false);
+        }
+        if p2_peek.is_none() {
+            // player1 won
+            return Some(true);
+        }
+
+        // Before either player deals a card,
+        // if there was a previous round in this game that had exactly
+        // the same cards in the same order in the same players' decks,
+        // the game instantly ends in a win for player 1.
+        let cloned_decks = (self.player1.deck.clone(), self.player2.deck.clone());
+        if self.previously_played.contains(&cloned_decks) {
+            // player 1 won
+            return Some(true);
+        }
+
+        // Otherwise, this round's cards must be in a new configuration;
+        // the players begin the round by each drawing the top card of their deck as normal.
+        let played1 = self.player1.play_card();
+        let played2 = self.player2.play_card();
+
+        self.previously_played.insert(cloned_decks);
+
+        // If both players have at least as many cards remaining in their deck as the value of the card they just drew,
+        // the winner of the round is determined by playing a new game of Recursive Combat.
+        if played1 <= self.player1.cards_left() && played2 <= self.player2.cards_left() {
+            let mut new_game = RecursiveGame {
+                player1: self.player1.clone_with_n_first(played1),
+                player2: self.player2.clone_with_n_first(played2),
+                previously_played: HashSet::new(),
+            };
+            if new_game.play() {
+                self.player1.insert_won((played1, played2));
+            } else {
+                self.player2.insert_won((played2, played1));
+            }
+        } else {
+            // Otherwise, at least one player must not have enough cards left in their deck to recurse;
+            // the winner of the round is the player with the higher-value card.
+            if played1 > played2 {
+                self.player1.insert_won((played1, played2));
+            } else {
+                self.player2.insert_won((played2, played1));
+            }
+        }
+
+        None
+    }
 }
 
 fn part1(input: &[String]) -> usize {
@@ -116,9 +188,17 @@ fn part1(input: &[String]) -> usize {
     }
 }
 
-// fn part2(input: &[String]) -> usize {
-// 0
-// }
+fn part2(input: &[String]) -> usize {
+    let player1 = Player::from(&input[0]);
+    let player2 = Player::from(&input[1]);
+
+    let mut recursive_game = RecursiveGame::new(player1, player2);
+    if recursive_game.play() {
+        recursive_game.player1.calculate_final_score()
+    } else {
+        recursive_game.player2.calculate_final_score()
+    }
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
@@ -127,8 +207,8 @@ fn main() {
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -157,5 +237,29 @@ mod tests {
         let expected = 306;
 
         assert_eq!(expected, part1(&input));
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            r#"Player 1:
+9
+2
+6
+3
+1"#
+            .to_string(),
+            r#"Player 2:
+5
+8
+4
+7
+10"#
+            .to_string(),
+        ];
+
+        let expected = 291;
+
+        assert_eq!(expected, part2(&input));
     }
 }
