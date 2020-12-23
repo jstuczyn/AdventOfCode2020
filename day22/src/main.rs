@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use utils::input_read;
 
 #[derive(Debug)]
@@ -42,6 +42,10 @@ impl Player {
 
     fn peek_next(&self) -> Option<&usize> {
         self.deck.get(0)
+    }
+
+    fn cards_left(&self) -> usize {
+        self.deck.len()
     }
 
     fn play_round(&mut self, other: &mut Self) -> Option<bool> {
@@ -79,6 +83,22 @@ impl Player {
             .map(|(i, card)| (i + 1) * *card)
             .sum()
     }
+}
+
+struct RecursiveGame {
+    player1: Player,
+    player2: Player,
+
+    // if there was a previous round in this game that had
+    // exactly the same cards in the same order in the same players' decks,
+    // the game instantly ends in a win for player 1.
+    previously_played: HashSet<(usize, usize)>,
+    // If both players have at least as many cards
+    // remaining in their deck as the value of the card they just drew,
+    // the winner of the round is determined by playing a new game of Recursive Combat (see below).
+
+    // Otherwise, at least one player must not have enough cards left in their deck to recurse;
+    // the winner of the round is the player with the higher-value card.
 }
 
 fn part1(input: &[String]) -> usize {
