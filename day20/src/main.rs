@@ -47,9 +47,17 @@ impl From<char> for Pixel {
 impl Into<char> for Pixel {
     fn into(self) -> char {
         match self {
+            // use those unicode characters instead of the original ones
+            // for way better readability
             Pixel::Active => '■',   //'ACTIVE_PIXEL,
             Pixel::Inactive => '□', //INACTIVE_PIXEL,
         }
+    }
+}
+
+impl Pixel {
+    fn is_active(&self) -> bool {
+        matches!(self, Pixel::Active)
     }
 }
 
@@ -65,7 +73,7 @@ impl From<&String> for Tile {
         // first line contains id
         let id = lines[0]
             .strip_suffix(':')
-            .expect(&*format!("wtf - {}", lines[0]))
+            .unwrap()
             .strip_prefix("Tile ")
             .unwrap()
             .parse()
@@ -121,12 +129,6 @@ impl Tile {
         self.rows.reverse();
     }
 
-    fn flip_vertically(&mut self) {
-        for row in self.rows.iter_mut() {
-            row.reverse()
-        }
-    }
-
     fn column(&self, idx: usize) -> Vec<Pixel> {
         self.rows.iter().map(|row| row[idx]).collect()
     }
@@ -163,13 +165,15 @@ impl Tile {
     }
 
     fn rotate_n_clockwise(&mut self, n: usize) {
+        if n == 0 {
+            return;
+        }
         for _ in 0..n {
             self.rotate_clockwise();
         }
     }
 
     fn try_match(&self, other: &mut Self) -> Option<MatchedSide> {
-        // println!("trying to match {} with {}", self.id, other.id);
         let self_edges = self.edges();
         let mut other_edges = other.edges();
         if !self_edges.matches(&other_edges) {
@@ -180,7 +184,7 @@ impl Tile {
         // and only then determine correct orientation of the other tile
 
         if let Some(side) = self_edges.direct_match(&other_edges) {
-            println!("no rotation on {:?}", side);
+            // println!("no rotation on {:?}", side);
             return Some(side);
         }
 
@@ -188,48 +192,39 @@ impl Tile {
         for i in 1..=3 {
             other_edges.rotate_clockwise();
             if let Some(side) = self_edges.direct_match(&other_edges) {
-                println!("with {} rotations on {:?}", i, side);
                 other.rotate_n_clockwise(i);
                 return Some(side);
             }
+        }
+        // reset
+        other_edges.rotate_clockwise();
 
-            // see if horizontal flip is required
-            other_edges.flip_horizontally();
+        other_edges.flip_horizontally();
+        if let Some(side) = self_edges.direct_match(&other_edges) {
+            other.flip_horizontally();
+            return Some(side);
+        }
+
+        for i in 1..=3 {
+            other_edges.rotate_clockwise();
             if let Some(side) = self_edges.direct_match(&other_edges) {
-                println!("with {} rotations + H flip on {:?}", i, side);
-                other.rotate_n_clockwise(i);
                 other.flip_horizontally();
-                return Some(side);
-            }
-            other_edges.flip_horizontally();
-
-            // or a vertical one
-            other_edges.flip_vertically();
-            if let Some(side) = self_edges.direct_match(&other_edges) {
-                println!("with {} rotations + V flip on {:?}", i, side);
                 other.rotate_n_clockwise(i);
-                other.flip_vertically();
                 return Some(side);
             }
-
-            // also vertical + horizontal
-            other_edges.flip_horizontally();
-            if let Some(side) = self_edges.direct_match(&other_edges) {
-                println!("with {} rotations + HV flip on {:?}", i, side);
-                other.rotate_n_clockwise(i);
-                other.flip_vertically();
-                other.flip_horizontally();
-                return Some(side);
-            }
-
-            // reverse flips
-            other_edges.flip_horizontally();
-            other_edges.flip_vertically();
-
-            // there's too many combinations but that's fine for now
         }
 
         unreachable!("we determined a match was possible!")
+    }
+
+    fn remove_border(self) -> Vec<Vec<Pixel>> {
+        let num_rows = self.rows.len();
+        self.rows
+            .into_iter()
+            .skip(1)
+            .take(num_rows - 2)
+            .map(|row| row.into_iter().skip(1).take(num_rows - 2).collect())
+            .collect()
     }
 }
 
@@ -248,12 +243,6 @@ impl Edges {
         mem::swap(&mut self.top, &mut self.bottom);
         self.right.reverse();
         self.left.reverse();
-    }
-
-    fn flip_vertically(&mut self) {
-        mem::swap(&mut self.right, &mut self.left);
-        self.top.reverse();
-        self.bottom.reverse();
     }
 
     fn rotate_clockwise(&mut self) {
@@ -335,7 +324,6 @@ impl TileGrid {
         side: MatchedSide,
         tile: Tile,
     ) -> Option<(usize, usize)> {
-        println!("inserting {} {:?} to {:?}", tile.id, side, relative_to);
         let (x, y) = relative_to;
         match side {
             MatchedSide::Top => {
@@ -376,8 +364,6 @@ impl TileGrid {
     }
 
     fn insert_tiles(&mut self, tiles: Vec<Tile>) {
-        println!("{}", self);
-
         // firstly, allow us to take them arbitrarily
         let mut tiles: Vec<Option<Tile>> = tiles.into_iter().map(Some).collect();
 
@@ -386,10 +372,7 @@ impl TileGrid {
         // start with any tile we have
         self.tiles[0][0] = tiles.pop().unwrap();
 
-        // println!("{}", self);
-
         loop {
-            println!("{}", self);
             if tiles.iter().all(|tile| tile.is_none()) {
                 break;
             }
@@ -403,13 +386,6 @@ impl TileGrid {
                     for unmatched_tile in tiles.iter_mut().filter(|tile| tile.is_some()) {
                         if let Some(matched_side) = tile.try_match(unmatched_tile.as_mut().unwrap())
                         {
-                            println!(
-                                "{} matched with {}. {:?} to {:?}",
-                                unmatched_tile.as_ref().unwrap().id,
-                                tile.id,
-                                matched_side,
-                                (x, y)
-                            );
                             tiles_to_place.push((
                                 (x, y),
                                 matched_side,
@@ -427,96 +403,19 @@ impl TileGrid {
                     relative_position.1 + relative_delta.1,
                 );
 
-                println!("gonna place {} at {:?}", tile.id, true_relative);
-
                 if let Some(delta) = self.insert_tile(true_relative, matched_side, tile) {
-                    println!("shift happened. delta: {:?}", delta);
                     relative_delta.0 = delta.0;
                     relative_delta.1 = delta.1;
                 }
             }
         }
-
-        // let mut tiles_to_place = Vec::new();
-        //
-        // for (y, row) in self.tiles.iter().enumerate() {
-        //     for (x, existing_tile) in row.iter().filter(|tile| tile.is_some()).enumerate() {
-        //         let tile = existing_tile.as_ref().unwrap();
-        //         for unmatched_tile in tiles.iter_mut().filter(|tile| tile.is_some()) {
-        //             if let Some(matched_side) = tile.try_match(unmatched_tile.as_mut().unwrap()) {
-        //                 tiles_to_place.push(((x, y), matched_side, unmatched_tile.take().unwrap()));
-        //             }
-        //         }
-        //     }
-        // }
-        //
-        // // FFF if shift happened all is fucked
-        // let mut relative_delta = (0, 0);
-        // for (relative_position, matched_side, tile) in tiles_to_place {
-        //     let true_relative = (
-        //         relative_position.0 + relative_delta.0,
-        //         relative_position.1 + relative_delta.1,
-        //     );
-        //     if let Some(delta) = self.insert_tile(true_relative, matched_side, tile) {
-        //         relative_delta.0 = delta.0;
-        //         relative_delta.1 = delta.1;
-        //     }
-        // }
-
-        println!("{:?}", self);
-
-        // let edges = self.tiles[0][0].as_ref().unwrap().edges();
-        //
-        // // for now, don't bother with whole thing, just find corners and multiply ids
-        // let mut corner_product = 1;
-        // 'outer: for tile1 in &tiles {
-        //     let edges1 = tile1.edges();
-        //     let mut tile1_matches = 0;
-        //     for tile2 in &tiles {
-        //         if tile1.id == tile2.id {
-        //             continue;
-        //         }
-        //
-        //         let edges2 = tile2.edges();
-        //         if edges1.matches(&edges2) {
-        //             tile1_matches += 1;
-        //         }
-        //         if tile1_matches > 2 {
-        //             continue 'outer;
-        //         }
-        //     }
-        //     if tile1_matches == 2 {
-        //         corner_product *= tile1.id;
-        //     }
-        //     // rotate
-        //     // flip h, flip v
-        //     // rotate
-        //     // flips
-        //     // rotate
-        //     // flips
-        //
-        //     // let other_edges = tile.edges();
-        //     // edges.matches(&other_edges);
-        //     // a,b,c,d
-        //     // flip H:
-        //     // flip V:
-        //
-        //     // rotate 1x:
-        //     // flip H 1x:
-        //     // flip V 1x:
-        //
-        //     // rotate 2x:
-        // }
-
-        // flip H -> rotate -> flip H
     }
 }
 
 impl Display for TileGrid {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for row in &self.tiles {
-            let mut grid_rows = vec!["".to_string(); 10];
-            let mut names = "".to_string();
+            let mut grid_rows = vec![" ".to_string(); 10];
             for tile in row {
                 let tile = tile.as_ref().cloned().unwrap_or_else(Tile::unset);
                 let tile_rows = tile.rows;
@@ -527,14 +426,12 @@ impl Display for TileGrid {
                             .map(|&pixel| Into::<char>::into(pixel))
                             .collect::<String>())
                 }
-                // names += &*format!("    {}   ", tile.id);
             }
 
-            // writeln!(f, "{}", names);
             for grid_row in grid_rows {
                 writeln!(f, "{}", grid_row)?;
             }
-            // writeln!(f)?;
+            writeln!(f)?;
         }
         Ok(())
     }
@@ -566,15 +463,12 @@ impl TileGrid {
     }
 
     fn shift_all_down(&mut self) {
-        println!("shifting down");
         self.tiles.rotate_right(1);
         // make sure first row is None now!
         assert!(self.tiles[0].iter().all(|tile| tile.is_none()));
     }
 
     fn shift_all_right(&mut self) {
-        println!("shifting right");
-
         for row in self.tiles.iter_mut() {
             row.rotate_right(1);
             // make sure first element is a None!
@@ -583,23 +477,163 @@ impl TileGrid {
     }
 }
 
-fn part1(input: &[String]) -> usize {
-    let mut tiles: Vec<_> = input.iter().map(Tile::from).collect();
+struct Image {
+    rows: Vec<Vec<Pixel>>,
+}
 
-    // let mut first = &mut tiles[0];
-    //
-    // println!("NORMAL: \n{}", first);
-    // first.flip_horizontally();
-    // println!("FLIP H: \n{}", first);
-    // first.flip_horizontally();
-    // first.flip_vertically();
-    //
-    // println!("FLIP V: \n{}", first);
-    // first.flip_vertically();
-    //
-    // first.rotate_clockwise();
-    // println!("ROTATE 90: \n{}", first);
-    // first.rotate_clockwise();
+impl From<TileGrid> for Image {
+    fn from(grid: TileGrid) -> Self {
+        let per_tile_rows = grid.tiles[0][0].as_ref().unwrap().rows.len() - 2;
+        let num_rows = grid.tiles.len() * (per_tile_rows);
+        let mut rows = Vec::with_capacity(num_rows);
+        for row in grid.tiles.into_iter() {
+            let mut grid_rows = vec![Vec::with_capacity(num_rows); per_tile_rows];
+            for tile in row.into_iter().map(|tile| tile.unwrap()) {
+                let borderless = tile.remove_border();
+                for (i, mut tile_row) in borderless.into_iter().enumerate() {
+                    grid_rows[i].append(&mut tile_row)
+                }
+            }
+            rows.append(&mut grid_rows);
+        }
+
+        Image { rows }
+    }
+}
+
+impl Display for Image {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for row in self.rows.iter() {
+            writeln!(
+                f,
+                "{}",
+                row.iter()
+                    .map(|&pixel| Into::<char>::into(pixel))
+                    .collect::<String>()
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl Image {
+    fn rotate_clockwise(&mut self) {
+        let columns: Vec<_> = (0..self.rows.len())
+            .map(|i| {
+                let mut column = self.column(i);
+                column.reverse();
+                column
+            })
+            .collect();
+        self.rows = columns
+    }
+
+    fn flip_horizontally(&mut self) {
+        self.rows.reverse();
+    }
+
+    fn column(&self, idx: usize) -> Vec<Pixel> {
+        self.rows.iter().map(|row| row[idx]).collect()
+    }
+
+    fn check_for_monster(&self, base: (usize, usize)) -> Option<bool> {
+        let monster = monster();
+
+        for (y, row) in monster.iter().enumerate() {
+            for x in row.iter() {
+                if base.1 + y >= self.rows.len() || base.0 + *x >= self.rows.len() {
+                    return None;
+                }
+                if !self.rows[base.1 + y][base.0 + *x].is_active() {
+                    return Some(false);
+                }
+            }
+        }
+
+        Some(true)
+    }
+
+    fn find_monsters_in_orientation(&self) -> usize {
+        let mut monsters = 0;
+        // right now just completely ignore Nones
+
+        for (y, row) in self.rows.iter().enumerate() {
+            for (x, _) in row.iter().enumerate() {
+                if let Some(res) = self.check_for_monster((x, y)) {
+                    if res {
+                        monsters += 1;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        monsters
+    }
+
+    fn find_monsters(&mut self) -> usize {
+        let monsters = self.find_monsters_in_orientation();
+        if monsters != 0 {
+            return monsters;
+        }
+
+        // for 90, 180, 270 rotation...
+        for _ in 1..=3 {
+            self.rotate_clockwise();
+            let monsters = self.find_monsters_in_orientation();
+            if monsters != 0 {
+                return monsters;
+            }
+        }
+        // reset
+        self.rotate_clockwise();
+
+        self.flip_horizontally();
+
+        let monsters = self.find_monsters_in_orientation();
+        if monsters != 0 {
+            return monsters;
+        }
+        for _ in 1..=3 {
+            self.rotate_clockwise();
+            let monsters = self.find_monsters_in_orientation();
+            if monsters != 0 {
+                return monsters;
+            }
+        }
+
+        unreachable!("there are no monsters in the image!!")
+    }
+
+    fn active_count(&self) -> usize {
+        self.rows
+            .iter()
+            .map(|row| row.iter().filter(|pixel| pixel.is_active()).count())
+            .sum()
+    }
+}
+
+#[inline]
+fn monster() -> [Vec<usize>; 3] {
+    /*
+                      #
+    #    ##    ##    ###
+     #  #  #  #  #  #
+        */
+
+    // row1: 18
+    // row2: 0,5 ,6, 11, 12, 17, 18, 19
+    // row3: 1,4 7, 10, 13, 16
+    [
+        vec![18],
+        vec![0, 5, 6, 11, 12, 17, 18, 19],
+        vec![1, 4, 7, 10, 13, 16],
+    ]
+}
+
+fn part1(input: &[String]) -> usize {
+    let tiles: Vec<_> = input.iter().map(Tile::from).collect();
 
     let side_len = (tiles.len() as f64).sqrt();
     // make sure it's a perfect square
@@ -623,21 +657,32 @@ fn part1(input: &[String]) -> usize {
             .id
 }
 
-// fn part2(input: &[String]) -> usize {
-// 0
-// }
+fn part2(input: &[String]) -> usize {
+    let tiles: Vec<_> = input.iter().map(Tile::from).collect();
+
+    let side_len = (tiles.len() as f64).sqrt();
+    // make sure it's a perfect square
+    assert_eq!((side_len as usize).pow(2), tiles.len());
+
+    let mut tile_grid = TileGrid::new(side_len as usize);
+    tile_grid.insert_tiles(tiles);
+
+    let mut image = Image::from(tile_grid);
+    let monsters = image.find_monsters();
+
+    // 15 is the number of tiles used by a single monster
+    image.active_count() - 15 * monsters
+}
 
 #[cfg(not(tarpaulin))]
 fn main() {
     let input = input_read::read_into_string_groups("input").expect("failed to read input file");
 
-    println!("{}", input[0]);
-
     let part1_result = part1(&input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(&input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -683,19 +728,8 @@ mod tests {
             tile.flip_horizontally();
             compare_tile_edges(&edges, &tile);
 
-            edges.flip_vertically();
-            tile.flip_vertically();
-            compare_tile_edges(&edges, &tile);
-
             edges.flip_horizontally();
             tile.flip_horizontally();
-            compare_tile_edges(&edges, &tile);
-
-            // reverse flips
-            edges.flip_horizontally();
-            tile.flip_horizontally();
-            edges.flip_vertically();
-            tile.flip_vertically();
             compare_tile_edges(&edges, &tile);
         }
     }
@@ -765,40 +799,6 @@ mod tests {
         let flipped = Tile::from(&expected_flipped);
 
         tile.flip_horizontally();
-        assert_eq!(tile, flipped);
-    }
-
-    #[test]
-    fn tile_vertical_flip() {
-        let raw_tile = r#"Tile 2311:
-..##.#..#.
-##..#.....
-#...##..#.
-####.#...#
-##.##.###.
-##...#.###
-.#.#.#..##
-..#....#..
-###...#.#.
-..###..###"#
-            .to_string();
-        let mut tile = Tile::from(&raw_tile);
-
-        let expected_flipped = r#"Tile 2311:
-.#..#.##..
-.....#..##
-.#..##...#
-#...#.####
-.###.##.##
-###.#...##
-##..#.#.#.
-..#....#..
-.#.#...###
-###..###.."#
-            .to_string();
-        let flipped = Tile::from(&expected_flipped);
-
-        tile.flip_vertically();
         assert_eq!(tile, flipped);
     }
 
@@ -918,5 +918,123 @@ mod tests {
         let expected = 20899048083289;
 
         assert_eq!(expected, part1(&input));
+    }
+
+    #[test]
+    fn part2_sample_input() {
+        let input = vec![
+            r#"Tile 2311:
+..##.#..#.
+##..#.....
+#...##..#.
+####.#...#
+##.##.###.
+##...#.###
+.#.#.#..##
+..#....#..
+###...#.#.
+..###..###"#
+                .to_string(),
+            r#"Tile 1951:
+#.##...##.
+#.####...#
+.....#..##
+#...######
+.##.#....#
+.###.#####
+###.##.##.
+.###....#.
+..#.#..#.#
+#...##.#.."#
+                .to_string(),
+            r#"Tile 1171:
+####...##.
+#..##.#..#
+##.#..#.#.
+.###.####.
+..###.####
+.##....##.
+.#...####.
+#.##.####.
+####..#...
+.....##..."#
+                .to_string(),
+            r#"Tile 1427:
+###.##.#..
+.#..#.##..
+.#.##.#..#
+#.#.#.##.#
+....#...##
+...##..##.
+...#.#####
+.#.####.#.
+..#..###.#
+..##.#..#."#
+                .to_string(),
+            r#"Tile 1489:
+##.#.#....
+..##...#..
+.##..##...
+..#...#...
+#####...#.
+#..#.#.#.#
+...#.#.#..
+##.#...##.
+..##.##.##
+###.##.#.."#
+                .to_string(),
+            r#"Tile 2473:
+#....####.
+#..#.##...
+#.##..#...
+######.#.#
+.#...#.#.#
+.#########
+.###.#..#.
+########.#
+##...##.#.
+..###.#.#."#
+                .to_string(),
+            r#"Tile 2971:
+..#.#....#
+#...###...
+#.#.###...
+##.##..#..
+.#####..##
+.#..####.#
+#..#.#..#.
+..####.###
+..#.#.###.
+...#.#.#.#"#
+                .to_string(),
+            r#"Tile 2729:
+...#.#.#.#
+####.#....
+..#.#.....
+....#..#.#
+.##..##.#.
+.#.####...
+####.#.#..
+##.####...
+##..#.##..
+#.##...##."#
+                .to_string(),
+            r#"Tile 3079:
+#.#.#####.
+.#..######
+..#.......
+######....
+####.#..#.
+.#...#.##.
+#.#####.##
+..#.###...
+..#.......
+..#.###..."#
+                .to_string(),
+        ];
+
+        let expected = 273;
+
+        assert_eq!(expected, part2(&input));
     }
 }
