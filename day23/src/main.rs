@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::rc::Rc;
 
@@ -28,29 +29,25 @@ impl Node {
     fn next_node(&self) -> Rc<RefCell<Node>> {
         Rc::clone(self.next.as_ref().unwrap())
     }
-
-    fn try_next_node(&self) -> Option<Rc<RefCell<Node>>> {
-        if self.next.is_none() {
-            None
-        } else {
-            Some(self.next_node())
-        }
-    }
 }
 
 struct NumRingBuffer {
     head: Rc<RefCell<Node>>,
+    lookup_cache: HashMap<usize, Rc<RefCell<Node>>>,
     size: usize,
 }
 
 impl NumRingBuffer {
     fn new(mut data: Vec<usize>) -> Self {
         let size = data.len();
+        let mut lookup_cache = HashMap::new();
 
         let mut current = Rc::new(RefCell::new(Node {
             data: data.remove(0),
             next: None,
         }));
+
+        lookup_cache.insert(current.borrow().data, Rc::clone(&current));
 
         let head = Rc::clone(&current);
 
@@ -61,13 +58,58 @@ impl NumRingBuffer {
             }))
         }) {
             current.borrow_mut().next = Some(Rc::clone(&node));
+            lookup_cache.insert(node.borrow().data, Rc::clone(&node));
             current = node;
         }
 
         // last node:
         current.borrow_mut().next = Some(Rc::clone(&head));
 
-        NumRingBuffer { head, size }
+        NumRingBuffer {
+            head,
+            size,
+            lookup_cache,
+        }
+    }
+
+    fn new_million(mut init_data: Vec<usize>) -> Self {
+        let size = 1_000_000;
+        let mut lookup_cache = HashMap::new();
+
+        let mut current = Rc::new(RefCell::new(Node {
+            data: init_data.remove(0),
+            next: None,
+        }));
+
+        lookup_cache.insert(current.borrow().data, Rc::clone(&current));
+
+        let head = Rc::clone(&current);
+
+        // note: we're taking 999_999 elements as we've already consumed one
+        for node in init_data
+            .into_iter()
+            .chain(std::iter::successors(Some(10), |first| Some(*first + 1)))
+            .take(999999)
+            .map(|num| {
+                Rc::new(RefCell::new(Node {
+                    data: num,
+                    next: None,
+                }))
+            })
+        {
+            current.borrow_mut().next = Some(Rc::clone(&node));
+            lookup_cache.insert(node.borrow().data, Rc::clone(&node));
+            current = node;
+        }
+
+        // last node:
+        current.borrow_mut().next = Some(Rc::clone(&head));
+
+        NumRingBuffer {
+            head,
+            size,
+            lookup_cache,
+        }
     }
 
     fn move_head(&mut self) {
@@ -79,28 +121,21 @@ impl NumRingBuffer {
         self.head.borrow().data
     }
 
-    // fn read_head_offset(&self, offset: usize) -> usize {
-    //     let mut node = &self.head;
-    //     for _ in 0..offset {
-    //         node = &node.next.as_ref().unwrap();
-    //     }
-    //     node.data
-    // }
+    fn find_one_node(&self) -> Rc<RefCell<Node>> {
+        Rc::clone(self.lookup_cache.get(&1).unwrap())
+    }
 
-    fn order_as_num(&self) -> usize {
+    fn part1_result(&self) -> usize {
         let mut digits = Vec::with_capacity(self.size);
         // look for '1'
-        let mut node = Rc::clone(&self.head);
-        while node.borrow().data != 1 {
-            let next = node.borrow().next_node();
-            node = next;
-        }
+        let one_node = self.find_one_node();
+
         // we have a '1' node. progress once
-        let mut none_one = node.borrow().next_node();
-        while none_one.borrow().data != 1 {
-            digits.push(none_one.borrow().data);
-            let next = none_one.borrow().next_node();
-            none_one = next;
+        let mut not_one = one_node.borrow().next_node();
+        while not_one.borrow().data != 1 {
+            digits.push(not_one.borrow().data);
+            let next = not_one.borrow().next_node();
+            not_one = next;
         }
 
         digits
@@ -117,6 +152,8 @@ impl NumRingBuffer {
         let mut current = Rc::clone(&next);
 
         // determine the fourth element
+        // ignore clippy as I can't be bothered to implement iterator for the nodes
+        #[allow(clippy::needless_range_loop)]
         for i in 0..3 {
             picked_values[i] = current.borrow().data;
             let next = current.borrow().next_node();
@@ -134,18 +171,14 @@ impl NumRingBuffer {
     }
 
     fn insert_after(&mut self, nodes: Rc<RefCell<Node>>, val: usize) {
-        let mut current = Rc::clone(&self.head);
+        let insertion_target = self.lookup_cache.get(&val).unwrap();
 
-        while current.borrow().data != val {
-            let next = current.borrow().next_node();
-            current = next;
-        }
         // get the node to which our last three should point to
-        let tail = current.borrow().next_node();
+        let tail = insertion_target.borrow().next_node();
 
         let mut nodes_ptr = Rc::clone(&nodes);
         // make the target node point to our subchain
-        current.borrow_mut().next = Some(nodes);
+        insertion_target.borrow_mut().next = Some(nodes);
 
         // and finally redirect the subchain to the correct tail
         while nodes_ptr.borrow().next.is_some() {
@@ -154,15 +187,6 @@ impl NumRingBuffer {
         }
         nodes_ptr.borrow_mut().next = Some(tail);
     }
-
-    // // TODO: just TAKE IT?
-    // fn next_three(&self) -> [usize; 3] {
-    //     [
-    //         self.read_head_offset(1),
-    //         self.read_head_offset(2),
-    //         self.read_head_offset(3),
-    //     ]
-    // }
 }
 
 impl Debug for NumRingBuffer {
@@ -202,60 +226,59 @@ impl CrabGame {
         }
     }
 
-    fn result(&self) -> usize {
-        self.buf.order_as_num()
-    }
+    fn new_million(input: usize) -> CrabGame {
+        let split_input = split_into_digits(input);
+        let buf = NumRingBuffer::new_million(split_input);
 
-    fn make_n_moves(&mut self, n: usize) {
-        for i in 0..n {
-            println!("-- move {} --", i + 1);
-            self.make_move();
-            println!("");
+        CrabGame {
+            buf,
+            picked: None,
+            destination: 0,
         }
     }
 
-    // highest cup is always 9
-    fn sub_one(val: usize) -> usize {
+    fn part1_result(&self) -> usize {
+        self.buf.part1_result()
+    }
+
+    fn part2_result(&self) -> usize {
+        let one_node = self.buf.find_one_node();
+        let next = one_node.borrow().next_node();
+        let label1 = next.borrow().data;
+        let label2 = next.borrow().next_node().borrow().data;
+        label1 * label2
+    }
+
+    fn make_n_moves(&mut self, n: usize) {
+        for _ in 0..n {
+            self.make_move();
+        }
+    }
+
+    fn sub_one(&self, val: usize) -> usize {
         let res = val - 1;
         if res == 0 {
-            9
+            self.buf.size
         } else {
             res
         }
     }
 
     fn select_destination_cup(&self) -> usize {
-        let mut potential = Self::sub_one(self.buf.read_head());
+        let mut potential = self.sub_one(self.buf.read_head());
         while potential == self.picked.as_ref().unwrap().1[0]
             || potential == self.picked.as_ref().unwrap().1[1]
             || potential == self.picked.as_ref().unwrap().1[2]
         {
-            potential = Self::sub_one(potential)
+            potential = self.sub_one(potential)
         }
 
         potential
     }
 
-    fn print_pickup(&self) {
-        let first = Rc::clone(&self.picked.as_ref().unwrap().0);
-        let second = first.borrow().next_node();
-        let third = second.borrow().next_node();
-        debug_assert!(third.borrow().next.is_none());
-
-        println!(
-            "pick up: {}, {}, {}",
-            first.borrow().data,
-            second.borrow().data,
-            third.borrow().data
-        );
-    }
-
     fn make_move(&mut self) {
-        println!("cups: {:?}", self.buf);
         self.picked = Some(self.buf.take_next_three());
-        self.print_pickup();
         self.destination = self.select_destination_cup();
-        println!("destination: {}", self.destination);
 
         let (next_nodes, _) = self.picked.take().unwrap();
         self.buf.insert_after(next_nodes, self.destination);
@@ -266,12 +289,16 @@ impl CrabGame {
 fn part1(input: usize) -> usize {
     let mut game = CrabGame::new(input);
     game.make_n_moves(100);
-    game.result()
+    game.part1_result()
 }
 
-// fn part2(input: &[usize]) -> usize {
-// 0
-// }
+// this is not included in coverage for the same reason as the part2 test
+#[cfg(not(tarpaulin))]
+fn part2(input: usize) -> usize {
+    let mut game = CrabGame::new_million(input);
+    game.make_n_moves(10_000_000);
+    game.part2_result()
+}
 
 fn split_into_digits(number: usize) -> Vec<usize> {
     let mut digits = Vec::new();
@@ -292,8 +319,8 @@ fn main() {
     let part1_result = part1(input);
     println!("Part 1 result is {}", part1_result);
 
-    // let part2_result = part2(&input);
-    // println!("Part 2 result is {}", part2_result);
+    let part2_result = part2(input);
+    println!("Part 2 result is {}", part2_result);
 }
 
 #[cfg(test)]
@@ -305,7 +332,7 @@ mod tests {
         let input = 389125467;
         let mut game = CrabGame::new(input);
         game.make_move();
-        let res = game.result();
+        let res = game.part1_result();
 
         assert_eq!(54673289, res)
     }
@@ -315,16 +342,28 @@ mod tests {
         let input = 389125467;
         let mut game = CrabGame::new(input);
         game.make_n_moves(10);
-        let res = game.result();
+        let res = game.part1_result();
 
         assert_eq!(92658374, res)
     }
 
+    #[test]
+    fn part1_sample_input() {
+        let input = 389125467;
+        let expected = 67384529;
+
+        assert_eq!(expected, part1(input))
+    }
+
+    // the below test passes, however, it is not committed as because is it run under
+    // `debug` release profile (and I can't be bothered to change that) it take too long to
+    // complete
+
     // #[test]
-    // fn part1_sample_input() {
+    // fn part2_sample_input() {
     //     let input = 389125467;
-    //     let expected = 67384529;
+    //     let expected = 149245887792;
     //
-    //     assert_eq!(expected, part1(input))
+    //     assert_eq!(expected, part2(input))
     // }
 }
