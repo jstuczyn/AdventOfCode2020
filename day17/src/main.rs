@@ -12,42 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use day17::Point;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use utils::input_read;
 
 const ACTIVE_CUBE: char = '#';
 const NUM_CYCLES: usize = 6;
-
-// Point contains list of values for each dimension
-#[derive(Debug, Eq, PartialEq, Clone, Hash)]
-struct Point(Vec<isize>);
-
-impl Point {
-    fn dimension_adjacent(&self, dim: usize) -> Vec<Point> {
-        let mut positively_adjacent = self.clone();
-        positively_adjacent.0[dim - 1] += 1;
-
-        let mut negatively_adjacent = self.clone();
-        negatively_adjacent.0[dim - 1] -= 1;
-
-        vec![positively_adjacent, negatively_adjacent]
-    }
-
-    fn adjacent_points(&self) -> Vec<Point> {
-        let mut adjacent = Vec::with_capacity((3usize.pow(self.0.len() as u32 - 1)) as usize);
-
-        for dim in 1..=self.0.len() {
-            let mut dim_adjacent = Vec::new();
-            for adj in adjacent.iter().chain(std::iter::once(self)) {
-                dim_adjacent.append(&mut adj.dimension_adjacent(dim))
-            }
-            adjacent.extend(dim_adjacent.into_iter().filter(|p| p != self))
-        }
-
-        adjacent
-    }
-}
 
 fn parse_initial_data(input: &[String], dims: usize) -> HashSet<Point> {
     let mut active_cubes = HashSet::new();
