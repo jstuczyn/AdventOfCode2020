@@ -1,15 +1,12 @@
 [package]
-name = "day17"
+name = "day24"
 version = "0.1.0"
 authors = ["jstuczyn <jedrzej.stuczynski@gmail.com>"]
 edition = "2018"
-
-[lib]
-name = "day17"
-path = "src/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 utils = { path = "../utils" }
+day17 = { path = "../day17" }
 rayon = "1.5"
