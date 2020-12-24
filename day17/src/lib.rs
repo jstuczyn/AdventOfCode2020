@@ -48,14 +48,17 @@ impl Point {
     }
 }
 
-impl Add<(isize, isize, isize)> for Point {
+impl Add<(isize, isize, isize)> for &Point {
     type Output = Point;
 
-    fn add(mut self, rhs: (isize, isize, isize)) -> Self::Output {
+    fn add(self, rhs: (isize, isize, isize)) -> Self::Output {
         assert_eq!(3, self.0.len());
 
-        self += rhs;
-        self
+        Point(vec![
+            self.0[0] + rhs.0,
+            self.0[1] + rhs.1,
+            self.0[2] + rhs.2,
+        ])
     }
 }
 
