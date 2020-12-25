@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Instant;
-
 const ORDER: usize = 20201227;
 const GENERATOR: usize = 7;
 
