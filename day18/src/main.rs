@@ -102,7 +102,7 @@ fn shunting_yard(input: &str, custom_precedence: &HashMap<Operator, usize>) -> V
                         .unwrap_or_else(|| operator.default_precedence());
                     while let Some(top) = stack.peek() {
                         let top_precedence = custom_precedence
-                            .get(&top)
+                            .get(top)
                             .copied()
                             .unwrap_or_else(|| top.default_precedence());
 

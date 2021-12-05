@@ -55,7 +55,7 @@ fn part1(input: &str) -> usize {
     let (timestamp, buses) = split_into_timestamp_and_buses(input);
     let (id, departure) = buses
         .into_iter()
-        .filter_map(|bus| bus)
+        .flatten()
         .map(|bus| (bus.id, bus.earliest_departure_from(timestamp)))
         .min_by(|(_, timestamp1), (_, timestamp2)| timestamp1.cmp(timestamp2))
         .unwrap();
@@ -102,12 +102,13 @@ fn part2(input: &str) -> usize {
     let (modulii, residues): (Vec<_>, Vec<_>) = buses
         .into_iter()
         .enumerate()
-        .filter_map(|(i, bus)| match bus {
-            Some(bus) => Some((
-                bus.id as isize,
-                (bus.id as isize - i as isize) % bus.id as isize,
-            )),
-            None => None,
+        .filter_map(|(i, bus)| {
+            bus.map(|bus| {
+                (
+                    bus.id as isize,
+                    (bus.id as isize - i as isize) % bus.id as isize,
+                )
+            })
         })
         .unzip();
 
@@ -136,7 +137,7 @@ mod tests {
 
         let expected = 295;
 
-        assert_eq!(expected, part1(&input));
+        assert_eq!(expected, part1(input));
     }
 
     #[test]
@@ -146,7 +147,7 @@ mod tests {
 
         let expected = 1068781;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
 
         let expected = 3417;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 
     #[test]
@@ -166,7 +167,7 @@ mod tests {
 
         let expected = 754018;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 
     #[test]
@@ -176,7 +177,7 @@ mod tests {
 
         let expected = 779210;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 
     #[test]
@@ -186,7 +187,7 @@ mod tests {
 
         let expected = 1261476;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 
     #[test]
@@ -196,6 +197,6 @@ mod tests {
 
         let expected = 1202161486;
 
-        assert_eq!(expected, part2(&input));
+        assert_eq!(expected, part2(input));
     }
 }
