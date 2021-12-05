@@ -44,9 +44,9 @@ impl From<char> for Pixel {
     }
 }
 
-impl Into<char> for Pixel {
-    fn into(self) -> char {
-        match self {
+impl From<Pixel> for char {
+    fn from(pixel: Pixel) -> Self {
+        match pixel {
             // use those unicode characters instead of the original ones
             // for way better readability
             Pixel::Active => '■',   //'ACTIVE_PIXEL,

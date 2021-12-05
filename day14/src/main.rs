@@ -33,9 +33,9 @@ impl MaskBit {
     }
 }
 
-impl Into<usize> for MaskBit {
-    fn into(self) -> usize {
-        match self {
+impl From<MaskBit> for usize {
+    fn from(mask: MaskBit) -> Self {
+        match mask {
             MaskBit::One => 1,
             MaskBit::Zero => 0,
             MaskBit::Floating => panic!("tried to convert 'floating' mask into usize!"),
@@ -144,7 +144,7 @@ fn part1(input: &[String]) -> usize {
             memory.write_with_value_mask(
                 address,
                 value,
-                &current_mask.as_ref().expect("no mask was set!"),
+                current_mask.as_ref().expect("no mask was set!"),
             );
         }
     }
@@ -164,7 +164,7 @@ fn part2(input: &[String]) -> usize {
             memory.write_with_address_mask(
                 address,
                 value,
-                &current_mask.as_ref().expect("no mask was set!"),
+                current_mask.as_ref().expect("no mask was set!"),
             );
         }
     }

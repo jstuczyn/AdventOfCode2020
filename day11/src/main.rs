@@ -42,9 +42,9 @@ impl From<char> for Seat {
     }
 }
 
-impl Into<char> for Seat {
-    fn into(self) -> char {
-        match self {
+impl From<Seat> for char {
+    fn from(seat: Seat) -> Self {
+        match seat {
             Seat::Empty => EMPTY_SEAT,
             Seat::Occupied => OCCUPIED_SEAT,
             Seat::Floor => FLOOR,

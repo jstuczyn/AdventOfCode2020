@@ -102,10 +102,10 @@ impl BagGraph {
 
             inner_bags.push(BagInner {
                 count: inner_bag_count,
-                bag: Rc::clone(&node),
+                bag: Rc::clone(node),
             });
 
-            inserted_inner_bags.push(Rc::clone(&node));
+            inserted_inner_bags.push(Rc::clone(node));
         }
 
         let parent = self
@@ -118,7 +118,7 @@ impl BagGraph {
         parent.borrow_mut().set_inner(inner_bags);
 
         for inner_bag in inserted_inner_bags {
-            inner_bag.borrow_mut().add_parent(Rc::clone(&parent))
+            inner_bag.borrow_mut().add_parent(Rc::clone(parent))
         }
     }
 }
@@ -202,7 +202,7 @@ fn parse_rule(rule: &str) -> (String, Vec<BagInnerRaw>) {
         .map(str::trim)
         .filter(|bag| !bag.is_empty())
         .map(into_count_and_name)
-        .filter_map(|entry| entry)
+        .flatten()
         .collect();
 
     (bag_name, raw_inner)
